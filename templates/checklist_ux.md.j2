@@ -1,0 +1,36 @@
+# EP Chatbot - UX-Flows Checkliste
+
+**Datum:** {{ date }}
+**Umgebung:** {{ environment_name }} ({{ environment_url }})
+**Tester:** {{ tester }}
+
+---
+
+## Automatisierte Prüfungen
+
+{% for test in results %}
+- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}{% if test.duration_ms > 0 %} ({{ test.duration_ms }}ms){% endif %}
+
+{% endfor %}
+
+## Manuelle Prüfungen
+
+### Gesprächsqualität
+- [ ] Bot-Antworten sind inhaltlich korrekt
+- [ ] Bot versteht Kontext über mehrere Nachrichten
+- [ ] Antworten haben angemessene Länge (nicht zu kurz, nicht zu lang)
+- [ ] Ton ist freundlich und zum Europa-Park passend
+
+### Fehlerbehandlung
+- [ ] Unverständliche Eingaben werden sinnvoll behandelt
+- [ ] Bot gibt hilfreiche Rückmeldung bei unbekannten Themen
+- [ ] Kein Absturz bei unerwarteten Eingaben
+
+### Performance
+- [ ] Chat fühlt sich responsiv an
+- [ ] Keine auffälligen Verzögerungen
+- [ ] Ladeanimation während der Bot-Antwort sichtbar
+
+---
+
+_Bericht generiert mit EP-Testing-Tool_

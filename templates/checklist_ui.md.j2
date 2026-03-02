@@ -1,0 +1,35 @@
+# EP Chatbot - UI-Konsistenz Checkliste
+
+**Datum:** {{ date }}
+**Umgebung:** {{ environment_name }} ({{ environment_url }})
+**Tester:** {{ tester }}
+
+---
+
+## Automatisierte Prüfungen
+
+{% for test in results %}
+- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}
+
+{% endfor %}
+
+## Manuelle Prüfungen
+
+### Layout
+- [ ] Chat-Widget ist gut positioniert
+- [ ] Abstände sind konsistent
+- [ ] Widget passt zum Gesamtdesign der Seite
+
+### Branding
+- [ ] Farben entsprechen dem Europa-Park CI
+- [ ] Schriftart ist korrekt
+- [ ] Logo ist vorhanden und korrekt
+
+### Responsive
+- [ ] Desktop-Darstellung geprüft (Screenshot: screenshots/visual_desktop.png)
+- [ ] Tablet-Darstellung geprüft (Screenshot: screenshots/visual_tablet.png)
+- [ ] Mobile-Darstellung geprüft (Screenshot: screenshots/visual_mobile.png)
+
+---
+
+_Bericht generiert mit EP-Testing-Tool_

@@ -1,0 +1,20 @@
+# EP-Testing-Tool: Europa-Park Branding-Konfiguration
+# Trage hier die Corporate-Identity-Werte ein, sobald sie bekannt sind.
+# Alle Werte sind optional – Tests werden übersprungen wenn der Wert null ist.
+
+brand:
+  name: "Europa-Park"
+
+  colors:
+    primary: null        # z.B. "#244369"
+    secondary: null
+    accent: null         # z.B. "#ee353a"
+    background: null
+    text: null
+
+  fonts:
+    primary: null        # z.B. "Source Sans Pro"
+    secondary: null
+
+  logo:
+    expected_alt_text: "Europa-Park"

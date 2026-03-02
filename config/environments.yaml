@@ -1,0 +1,15 @@
+# EP-Testing-Tool: Umgebungskonfiguration
+# Passe die URLs an eure tatsächlichen Chatbot-Umgebungen an.
+
+environments:
+  dev:
+    url: "https://dev-chatbot.europapark.example.com"
+    description: "Entwicklungsumgebung"
+  staging:
+    url: "https://https://stage.ecki.ai/"
+    description: "Staging/Test-Umgebung"
+  prod:
+    url: "https://chatbot.europapark.de"
+    description: "Produktivumgebung"
+
+default: dev

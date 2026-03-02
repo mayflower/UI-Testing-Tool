@@ -1,0 +1,86 @@
+# EP Chatbot - UI/UX Testbericht
+
+| Feld | Wert |
+|------|------|
+| **Datum** | {{ date }} |
+| **Umgebung** | {{ environment_name }} ({{ environment_url }}) |
+| **Beschreibung** | {{ environment_description }} |
+| **Tester** | {{ tester }} |
+
+---
+
+## Zusammenfassung
+
+| Metrik | Wert |
+|--------|------|
+| Gesamt | {{ total }} Tests |
+| Bestanden | {{ passed }} |
+| Fehlgeschlagen | {{ failed }} |
+| Übersprungen | {{ skipped }} |
+| **Bestehensquote** | **{{ pass_rate }}%** |
+
+---
+
+## UI-Konsistenz
+
+{% if ui_results %}
+{% for test in ui_results %}
+- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {% if test.failed %}**FEHLER** {% elif test.skipped %}_(übersprungen)_ {% endif %}{{ test.name }}{% if test.message %} — {{ test.message }}{% endif %}
+
+{% endfor %}
+{% else %}
+_Keine UI-Tests ausgeführt._
+{% endif %}
+
+---
+
+## UX-Flows
+
+{% if ux_results %}
+{% for test in ux_results %}
+- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {% if test.failed %}**FEHLER** {% elif test.skipped %}_(übersprungen)_ {% endif %}{{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}{% if test.duration_ms > 0 %} ({{ test.duration_ms }}ms){% endif %}
+
+{% endfor %}
+{% else %}
+_Keine UX-Tests ausgeführt._
+{% endif %}
+
+---
+
+## Accessibility
+
+{% if a11y_results %}
+{% for test in a11y_results %}
+- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {% if test.failed %}**FEHLER** {% elif test.skipped %}_(übersprungen)_ {% endif %}{{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}
+
+{% endfor %}
+{% else %}
+_Keine Accessibility-Tests ausgeführt._
+{% endif %}
+
+---
+
+## Manuelle Prüfpunkte
+
+Die folgenden Punkte müssen manuell geprüft werden. Bitte nach der Durchsicht abhaken:
+
+### Visuelle Prüfung
+- [ ] Screenshots in `screenshots/` geprüft
+- [ ] Gesamteindruck des Chat-Widgets ist ansprechend
+- [ ] Abstände und Proportionen wirken harmonisch
+- [ ] Keine visuellen Artefakte oder Darstellungsfehler
+
+### Inhaltliche Prüfung
+- [ ] Begrüßungstext ist freundlich und informativ
+- [ ] Antworten sind inhaltlich korrekt
+- [ ] Ton und Sprache passen zum Europa-Park Markenauftritt
+- [ ] Keine Rechtschreib- oder Grammatikfehler in Bot-Antworten
+
+### Interaktion
+- [ ] Chat fühlt sich flüssig und responsiv an
+- [ ] Fehlermeldungen sind verständlich
+- [ ] Conversation-Flow ist logisch und hilfreich
+
+---
+
+_Bericht generiert mit EP-Testing-Tool_

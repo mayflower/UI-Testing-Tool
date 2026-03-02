@@ -1,0 +1,26 @@
+[project]
+name = "ep-testing-tool"
+version = "0.1.0"
+description = "UI/UX Testing-Tool für den Europa-Park KI-Chatbot"
+requires-python = ">=3.10"
+dependencies = [
+    "playwright>=1.40",
+    "pytest>=8.0",
+    "pytest-playwright>=0.5",
+    "axe-playwright-python>=0.1",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "jinja2>=3.1",
+]
+
+[project.scripts]
+ep-test = "run:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "ui: UI consistency tests",
+    "ux: UX flow tests",
+    "a11y: Accessibility tests",
+]
+addopts = "-v --tb=short"
