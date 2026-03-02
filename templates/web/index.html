@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EP-Testing-Tool | Europa-Park Chatbot</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>EP-Testing-Tool</h1>
+            <p class="subtitle">UI/UX Tests &mdash; Europa-Park KI-Chatbot</p>
+        </div>
+        <div class="header-status" id="connectionStatus">
+            <span class="status-dot"></span> Bereit
+        </div>
+    </header>
+
+    <main>
+        <!-- Steuerungsbereich -->
+        <section class="control-panel">
+            <div class="card">
+                <h2>Testlauf starten</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="envSelect">Umgebung</label>
+                        <select id="envSelect">
+                            <option value="">Wird geladen...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="suiteSelect">Testsuite</label>
+                        <select id="suiteSelect">
+                            <option value="">Alle Tests</option>
+                            <option value="ui">UI-Konsistenz</option>
+                            <option value="ux">UX-Flows</option>
+                            <option value="a11y">Accessibility</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-actions">
+                        <button id="btnRunTests" class="btn btn-primary" onclick="runTests()">
+                            Tests starten
+                        </button>
+                        <button id="btnDiscover" class="btn btn-secondary" onclick="runDiscovery()">
+                            Discovery
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Status-Karten -->
+        <section class="status-cards">
+            <div class="card stat-card" id="cardSelectors">
+                <div class="stat-icon">&#9881;</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="selectorCount">-/-</div>
+                    <div class="stat-label">Selektoren konfiguriert</div>
+                </div>
+            </div>
+            <div class="card stat-card" id="cardEnvironment">
+                <div class="stat-icon">&#9729;</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="envCount">-</div>
+                    <div class="stat-label">Umgebungen</div>
+                </div>
+            </div>
+            <div class="card stat-card" id="cardLastRun">
+                <div class="stat-icon">&#9200;</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="lastRunStatus">--</div>
+                    <div class="stat-label">Letzter Testlauf</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testergebnisse -->
+        <section class="results-section" id="resultsSection" style="display:none;">
+            <div class="card">
+                <div class="results-header">
+                    <h2>Testergebnisse</h2>
+                    <div class="results-summary" id="resultsSummary"></div>
+                </div>
+
+                <!-- Fortschrittsbalken -->
+                <div class="progress-bar" id="progressBar" style="display:none;">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <!-- Ergebnis-Tabs -->
+                <div class="tabs">
+                    <button class="tab active" data-tab="all" onclick="switchTab('all')">Alle</button>
+                    <button class="tab" data-tab="ui" onclick="switchTab('ui')">UI</button>
+                    <button class="tab" data-tab="ux" onclick="switchTab('ux')">UX</button>
+                    <button class="tab" data-tab="a11y" onclick="switchTab('a11y')">A11y</button>
+                    <button class="tab" data-tab="output" onclick="switchTab('output')">Konsole</button>
+                </div>
+
+                <!-- Testergebnis-Liste -->
+                <div class="tab-content active" id="tab-all">
+                    <div class="test-list" id="testList"></div>
+                </div>
+                <div class="tab-content" id="tab-ui">
+                    <div class="test-list" id="testListUI"></div>
+                </div>
+                <div class="tab-content" id="tab-ux">
+                    <div class="test-list" id="testListUX"></div>
+                </div>
+                <div class="tab-content" id="tab-a11y">
+                    <div class="test-list" id="testListA11y"></div>
+                </div>
+                <div class="tab-content" id="tab-output">
+                    <pre class="console-output" id="consoleOutput"></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports & Screenshots -->
+        <section class="bottom-section">
+            <div class="card">
+                <h2>Reports</h2>
+                <div class="report-list" id="reportList">
+                    <p class="placeholder">Noch keine Reports vorhanden.</p>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Screenshots</h2>
+                <div class="screenshot-grid" id="screenshotGrid">
+                    <p class="placeholder">Noch keine Screenshots vorhanden.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Discovery-Modal -->
+        <div class="modal" id="discoveryModal" style="display:none;">
+            <div class="modal-content card">
+                <h2>Selektor-Discovery</h2>
+                <p id="discoveryStatus">Discovery wird durchgefuehrt...</p>
+                <div id="discoveryResults"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal('discoveryModal')">Schliessen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report-Modal -->
+        <div class="modal" id="reportModal" style="display:none;">
+            <div class="modal-content card modal-wide">
+                <div class="modal-header">
+                    <h2 id="reportModalTitle">Report</h2>
+                    <button class="btn-close" onclick="closeModal('reportModal')">&times;</button>
+                </div>
+                <pre class="report-content" id="reportModalContent"></pre>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>EP-Testing-Tool v0.1.0 &mdash; Europa-Park KI-Chatbot UI/UX Tests</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

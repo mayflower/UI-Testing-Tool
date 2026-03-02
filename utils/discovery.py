@@ -1,5 +1,7 @@
 """Auto-Discovery für CSS-Selektoren des Chat-Widgets."""
 
+from __future__ import annotations
+
 from playwright.sync_api import sync_playwright, Page
 
 from config.settings import (

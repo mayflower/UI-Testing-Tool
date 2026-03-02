@@ -1,5 +1,7 @@
 """UI-Tests: Branding, Farben und Typografie."""
 
+from __future__ import annotations
+
 import pytest
 
 

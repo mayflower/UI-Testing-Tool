@@ -1,5 +1,7 @@
 """Report-Generator: Erzeugt Markdown-Checklisten aus Testergebnissen."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from pathlib import Path
 

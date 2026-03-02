@@ -4,7 +4,7 @@ UI/UX Testing-Tool für den Europa-Park KI-Chatbot (mAIstack).
 
 ## Voraussetzungen
 
-- Python 3.10+
+- Python 3.9+
 - Node.js (für AXE MCP Server, optional)
 
 ## Setup
@@ -15,7 +15,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Dependencies installieren
-pip install playwright pytest pytest-playwright axe-playwright-python pyyaml python-dotenv jinja2
+pip install playwright pytest pytest-playwright axe-playwright-python pyyaml python-dotenv jinja2 flask
 
 # Playwright-Browser installieren
 playwright install chromium
@@ -64,6 +64,21 @@ brand:
 ```
 
 ## Nutzung
+
+### Web-Frontend (empfohlen)
+
+```bash
+# Web-Dashboard starten
+python app.py
+```
+
+Öffne http://localhost:5000 im Browser. Das Dashboard bietet:
+- Umgebung und Testsuite per Dropdown wählen
+- Tests per Klick starten mit Live-Ergebnissen
+- Selektor-Discovery direkt im Browser
+- Reports und Screenshots ansehen
+
+### CLI
 
 ```bash
 # Alle Tests ausführen
@@ -125,6 +140,7 @@ Setup-Anleitung: `config/mcp_axe_setup.md`
 
 ```
 EP-Testing_Tool/
+├── app.py                 # Web-Frontend (Flask)
 ├── run.py                 # CLI-Einstiegspunkt
 ├── conftest.py            # pytest Fixtures
 ├── config/                # Konfigurationsdateien
@@ -133,7 +149,10 @@ EP-Testing_Tool/
 │   ├── ux/                # UX-Tests
 │   └── a11y/              # Accessibility-Tests
 ├── utils/                 # Hilfsfunktionen
-├── templates/             # Report-Templates
+├── templates/
+│   ├── web/               # HTML-Templates (Frontend)
+│   └── *.md.j2            # Report-Templates
+├── static/                # CSS & JS für Frontend
 ├── reports/               # Generierte Berichte
 └── screenshots/           # Aufgenommene Screenshots
 ```

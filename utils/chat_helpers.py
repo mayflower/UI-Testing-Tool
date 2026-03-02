@@ -1,5 +1,7 @@
 """Hilfsfunktionen für die Interaktion mit dem Chat-Widget."""
 
+from __future__ import annotations
+
 import time
 
 from playwright.sync_api import Page
