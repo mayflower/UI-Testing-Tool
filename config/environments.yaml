@@ -12,4 +12,4 @@ environments:
     url: "https://chatbot.europapark.de"
     description: "Produktivumgebung"
 
-default: dev
+default: staging
