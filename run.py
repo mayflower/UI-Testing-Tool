@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -182,13 +183,35 @@ Beispiele:
         action="store_true",
         help="Browser sichtbar starten (nicht headless)",
     )
+    parser.add_argument(
+        "--login-url",
+        help="Login-URL fuer authentifizierte Chatbots",
+        default=None,
+    )
+    parser.add_argument(
+        "--username",
+        help="Benutzername fuer Login",
+        default=None,
+    )
+    parser.add_argument(
+        "--password",
+        help="Passwort fuer Login",
+        default=None,
+    )
 
     args = parser.parse_args()
 
     # Headed-Modus überschreiben
     if args.headed:
-        import os
         os.environ["HEADLESS"] = "false"
+
+    # Login-Credentials als Umgebungsvariablen setzen
+    if args.login_url:
+        os.environ["CHATBOT_LOGIN_URL"] = args.login_url
+    if args.username:
+        os.environ["CHATBOT_USERNAME"] = args.username
+    if args.password:
+        os.environ["CHATBOT_PASSWORD"] = args.password
 
     # Verzeichnisse sicherstellen
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)

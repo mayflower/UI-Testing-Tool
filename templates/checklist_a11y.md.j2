@@ -1,19 +1,36 @@
-# EP Chatbot - Accessibility Checkliste
+# EP Chatbot – Accessibility Checkliste
 
-**Datum:** {{ date }}
-**Umgebung:** {{ environment_name }} ({{ environment_url }})
-**Tester:** {{ tester }}
+| Feld | Wert |
+|------|------|
+| **Datum** | {{ date }} |
+| **Umgebung** | {{ environment_name }} ({{ environment_url }}) |
+| **Tester** | {{ tester }} |
 
 ---
 
-## Automatisierte Prüfungen (axe-core)
+## Automatisierte Pruefungen (axe-core / WCAG 2.1 AA)
 
+| Status | Pruefpunkt | Beschreibung |
+|--------|------------|--------------|
 {% for test in results %}
-- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}
-
+| {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }} |
 {% endfor %}
 
-## Manuelle Prüfungen
+{% if actions %}
+---
+
+## Handlungsbedarf
+
+| Nr. | Pruefpunkt | Empfohlene Massnahme |
+|-----|------------|----------------------|
+{% for item in actions %}
+| {{ loop.index }} | {{ item.label }} | {{ item.action }} |
+{% endfor %}
+
+{% endif %}
+---
+
+## Manuelle Pruefungen
 
 ### Tastaturnavigation
 - [ ] Alle interaktiven Elemente per Tab erreichbar
@@ -22,18 +39,18 @@
 - [ ] Kein Keyboard-Trap vorhanden
 
 ### Screenreader
-- [ ] Neue Nachrichten werden angekündigt
-- [ ] Eingabefeld hat verständliches Label
-- [ ] Buttons haben verständliche Beschreibungen
+- [ ] Neue Nachrichten werden angekuendigt
+- [ ] Eingabefeld hat verstaendliches Label
+- [ ] Buttons haben verstaendliche Beschreibungen
 - [ ] Nachrichtenverlauf ist navigierbar
 
 ### Visuell
-- [ ] Kontrastverhältnisse ausreichend (min. 4.5:1)
+- [ ] Kontrastverhaeltnisse ausreichend (min. 4.5:1)
 - [ ] Text ist bei 200% Zoom noch lesbar
 - [ ] Keine Information nur durch Farbe vermittelt
 
 ### Detaillierter axe-Report
-Siehe `reports/axe_report.json` für den vollständigen Audit.
+Siehe `reports/axe_report.json` fuer den vollstaendigen Audit.
 
 ---
 

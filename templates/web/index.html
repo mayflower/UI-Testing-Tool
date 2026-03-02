@@ -18,17 +18,50 @@
     </header>
 
     <main>
-        <!-- Steuerungsbereich -->
+        <!-- URL & Steuerung -->
         <section class="control-panel">
             <div class="card">
-                <h2>Testlauf starten</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="envSelect">Umgebung</label>
-                        <select id="envSelect">
-                            <option value="">Wird geladen...</option>
-                        </select>
+                <h2>Chatbot-URL</h2>
+                <div class="url-input-row">
+                    <input type="url" id="urlInput" class="url-input"
+                           placeholder="https://chatbot.europapark.de"
+                           spellcheck="false">
+                    <button class="btn btn-small btn-secondary" onclick="saveAsEnvironment()" title="URL als Umgebung speichern">Speichern</button>
+                </div>
+
+                <!-- Login-Credentials (aufklappbar) -->
+                <details class="login-section" id="loginSection">
+                    <summary class="login-toggle">Login-Credentials (optional)</summary>
+                    <div class="login-fields">
+                        <div class="form-row" style="margin-top: 0.75rem;">
+                            <div class="form-group">
+                                <label for="loginUrlInput">Login-URL</label>
+                                <input type="url" id="loginUrlInput" class="text-input"
+                                       placeholder="https://stage.ecki.ai/login"
+                                       spellcheck="false">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-top: 0.5rem;">
+                            <div class="form-group">
+                                <label for="usernameInput">Benutzername</label>
+                                <input type="text" id="usernameInput" class="text-input"
+                                       placeholder="Benutzername" autocomplete="username">
+                            </div>
+                            <div class="form-group">
+                                <label for="passwordInput">Passwort</label>
+                                <input type="password" id="passwordInput" class="text-input"
+                                       placeholder="Passwort" autocomplete="current-password">
+                            </div>
+                        </div>
                     </div>
+                </details>
+
+                <!-- Gespeicherte Umgebungen -->
+                <div class="saved-envs" id="savedEnvs">
+                    <!-- Wird dynamisch gefuellt -->
+                </div>
+
+                <div class="form-row" style="margin-top: 1rem;">
                     <div class="form-group">
                         <label for="suiteSelect">Testsuite</label>
                         <select id="suiteSelect">
@@ -59,11 +92,11 @@
                     <div class="stat-label">Selektoren konfiguriert</div>
                 </div>
             </div>
-            <div class="card stat-card" id="cardEnvironment">
-                <div class="stat-icon">&#9729;</div>
+            <div class="card stat-card" id="cardUrl">
+                <div class="stat-icon">&#127760;</div>
                 <div class="stat-content">
                     <div class="stat-value" id="envCount">-</div>
-                    <div class="stat-label">Umgebungen</div>
+                    <div class="stat-label">Gespeicherte URLs</div>
                 </div>
             </div>
             <div class="card stat-card" id="cardLastRun">
@@ -152,6 +185,49 @@
                     <button class="btn-close" onclick="closeModal('reportModal')">&times;</button>
                 </div>
                 <pre class="report-content" id="reportModalContent"></pre>
+            </div>
+        </div>
+
+        <!-- Umgebung-speichern-Modal -->
+        <div class="modal" id="saveEnvModal" style="display:none;">
+            <div class="modal-content card">
+                <h2>URL als Umgebung speichern</h2>
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="saveEnvName">Name</label>
+                    <input type="text" id="saveEnvName" class="text-input" placeholder="z.B. dev, staging, prod">
+                </div>
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="saveEnvUrl">URL</label>
+                    <input type="url" id="saveEnvUrl" class="text-input" readonly>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="saveEnvDesc">Beschreibung (optional)</label>
+                    <input type="text" id="saveEnvDesc" class="text-input" placeholder="z.B. Entwicklungsumgebung">
+                </div>
+                <details class="login-section" style="margin-bottom: 1rem;">
+                    <summary class="login-toggle">Login-Credentials (optional)</summary>
+                    <div class="login-fields">
+                        <div class="form-group" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+                            <label for="saveEnvLoginUrl">Login-URL</label>
+                            <input type="url" id="saveEnvLoginUrl" class="text-input"
+                                   placeholder="https://example.com/login">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label for="saveEnvUsername">Benutzername</label>
+                            <input type="text" id="saveEnvUsername" class="text-input"
+                                   placeholder="Benutzername">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label for="saveEnvPassword">Passwort</label>
+                            <input type="password" id="saveEnvPassword" class="text-input"
+                                   placeholder="Passwort">
+                        </div>
+                    </div>
+                </details>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal('saveEnvModal')">Abbrechen</button>
+                    <button class="btn btn-primary" onclick="confirmSaveEnvironment()">Speichern</button>
+                </div>
             </div>
         </div>
     </main>

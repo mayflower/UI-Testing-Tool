@@ -11,6 +11,7 @@ from config.settings import (
     get_environment,
     save_selectors,
 )
+from utils.login_helper import perform_login, perform_login_on_page, needs_login
 
 # Typische Patterns für Chat-Widget-Elemente
 DISCOVERY_PATTERNS = {
@@ -121,18 +122,60 @@ def _find_element(page: Page, patterns: list[str]) -> dict | None:
     return None
 
 
+def discover_selectors_by_url(
+    url: str,
+    login_url: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+) -> dict:
+    """
+    Discovery mit einer direkten URL (ohne environments.yaml).
+
+    Returns:
+        Dict mit erkannten Selektoren und Metadaten.
+    """
+    return _discover_selectors_core(
+        url,
+        environment_label="Direkte URL",
+        login_url=login_url,
+        username=username,
+        password=password,
+    )
+
+
 def discover_selectors(env_name: str | None = None) -> dict:
     """
-    Öffne den Chatbot und erkenne automatisch die Chat-Widget-Selektoren.
+    Discovery über einen Umgebungsnamen aus environments.yaml.
 
     Returns:
         Dict mit erkannten Selektoren und Metadaten.
     """
     env = get_environment(env_name)
-    url = env["url"]
+    return _discover_selectors_core(
+        env["url"],
+        environment_label=env.get("description", env_name),
+        login_url=env.get("login_url"),
+        username=env.get("username"),
+        password=env.get("password"),
+    )
 
+
+def _discover_selectors_core(
+    url: str,
+    environment_label: str = "",
+    login_url: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+) -> dict:
+    """
+    Kern-Logik: Öffne eine URL und erkenne Chat-Widget-Selektoren.
+
+    Returns:
+        Dict mit erkannten Selektoren und Metadaten.
+    """
     print(f"\n🔍 Discovery-Modus für: {url}")
-    print(f"   Umgebung: {env.get('description', env_name)}\n")
+    if environment_label:
+        print(f"   Umgebung: {environment_label}\n")
 
     results = {}
     discovered_selectors = {}
@@ -142,6 +185,25 @@ def discover_selectors(env_name: str | None = None) -> dict:
         browser = browser_type.launch(headless=HEADLESS)
         page = browser.new_page()
         page.set_default_navigation_timeout(NAVIGATION_TIMEOUT)
+
+        # Login durchfuehren, falls Credentials vorhanden
+        if needs_login(login_url, username, password):
+            try:
+                if login_url:
+                    # Separate Login-Seite: erst Login, dann Chatbot
+                    print(f"   🔐 Login auf: {login_url}")
+                    perform_login(page, login_url, username, password)
+                    print("   ✅ Login erfolgreich\n")
+                else:
+                    # Chatbot-URL leitet selbst zur Login-Seite weiter
+                    print(f"   🔐 Login auf: {url} (Redirect)")
+                    page.goto(url, wait_until="networkidle")
+                    perform_login_on_page(page, username, password)
+                    print("   ✅ Login erfolgreich\n")
+            except Exception as e:
+                print(f"   ❌ Login fehlgeschlagen: {e}")
+                browser.close()
+                return {"error": f"Login fehlgeschlagen: {e}"}
 
         try:
             page.goto(url, wait_until="networkidle")
@@ -182,7 +244,7 @@ def discover_selectors(env_name: str | None = None) -> dict:
         "selectors": discovered_selectors,
         "details": results,
         "url": url,
-        "environment": env_name or env.get("name"),
+        "environment": environment_label or "custom",
     }
 
 

@@ -3,6 +3,7 @@
 import pytest
 from playwright.sync_api import sync_playwright
 
+from utils.login_helper import perform_login, perform_login_on_page, needs_login
 from config.settings import (
     HEADLESS,
     SLOW_MO,
@@ -78,7 +79,27 @@ def browser_context(environment):
 def page(browser_context, environment):
     """Frische Seite für jeden Test, navigiert zum Chatbot."""
     page = browser_context.new_page()
-    page.goto(environment["url"], wait_until="networkidle")
+
+    # Login durchfuehren, falls Credentials vorhanden
+    login_url = environment.get("login_url", "")
+    username = environment.get("username", "")
+    password = environment.get("password", "")
+
+    if needs_login(login_url, username, password):
+        try:
+            if login_url:
+                # Separate Login-Seite: erst Login, dann Chatbot
+                perform_login(page, login_url, username, password)
+                page.goto(environment["url"], wait_until="networkidle")
+            else:
+                # Chatbot-URL leitet selbst zur Login-Seite weiter
+                page.goto(environment["url"], wait_until="networkidle")
+                perform_login_on_page(page, username, password)
+        except Exception as e:
+            page.close()
+            pytest.fail(f"Login fehlgeschlagen: {e}")
+    else:
+        page.goto(environment["url"], wait_until="networkidle")
     yield page
     page.close()
 

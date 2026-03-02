@@ -48,6 +48,18 @@ def get_environments() -> dict:
 
 def get_environment(name: str | None = None) -> dict:
     """Lade eine spezifische Umgebung. Fallback auf Default."""
+    # Direkter URL-Override via Umgebungsvariable (vom Web-Frontend gesetzt)
+    direct_url = os.getenv("CHATBOT_URL")
+    if direct_url:
+        return {
+            "name": name or "custom",
+            "url": direct_url,
+            "description": "Direkte URL",
+            "login_url": os.getenv("CHATBOT_LOGIN_URL", ""),
+            "username": os.getenv("CHATBOT_USERNAME", ""),
+            "password": os.getenv("CHATBOT_PASSWORD", ""),
+        }
+
     envs = _load_yaml("environments.yaml")
     env_name = name or os.getenv("DEFAULT_ENV") or envs.get("default", "dev")
     environments = envs.get("environments", {})
@@ -59,6 +71,45 @@ def get_environment(name: str | None = None) -> dict:
     env = environments[env_name]
     env["name"] = env_name
     return env
+
+
+def save_environments(environments: dict, default: str | None = None) -> None:
+    """Speichere Umgebungen in environments.yaml."""
+    path = CONFIG_DIR / "environments.yaml"
+    data = {"environments": environments}
+    if default:
+        data["default"] = default
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+
+
+def add_environment(
+    name: str,
+    url: str,
+    description: str = "",
+    login_url: str = "",
+    username: str = "",
+    password: str = "",
+) -> None:
+    """Füge eine neue Umgebung hinzu oder aktualisiere eine bestehende."""
+    envs = get_environments()
+    envs[name] = {"url": url}
+    if description:
+        envs[name]["description"] = description
+    if login_url:
+        envs[name]["login_url"] = login_url
+    if username:
+        envs[name]["username"] = username
+    if password:
+        envs[name]["password"] = password
+    save_environments(envs)
+
+
+def remove_environment(name: str) -> None:
+    """Entferne eine Umgebung."""
+    envs = get_environments()
+    envs.pop(name, None)
+    save_environments(envs)
 
 
 def get_selectors() -> dict:

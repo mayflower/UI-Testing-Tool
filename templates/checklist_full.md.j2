@@ -1,84 +1,109 @@
-# EP Chatbot - UI/UX Testbericht
+# EP Chatbot – Testbericht
 
 | Feld | Wert |
 |------|------|
 | **Datum** | {{ date }} |
-| **Umgebung** | {{ environment_name }} ({{ environment_url }}) |
-| **Beschreibung** | {{ environment_description }} |
+| **Umgebung** | {{ environment_name }} |
+| **URL** | {{ environment_url }} |
 | **Tester** | {{ tester }} |
 
 ---
 
-## Zusammenfassung
+## Ergebnis-Zusammenfassung
 
-| Metrik | Wert |
-|--------|------|
-| Gesamt | {{ total }} Tests |
+| Metrik | Anzahl |
+|--------|--------|
+| Tests gesamt | {{ total }} |
 | Bestanden | {{ passed }} |
 | Fehlgeschlagen | {{ failed }} |
-| Übersprungen | {{ skipped }} |
+| Uebersprungen | {{ skipped }} |
 | **Bestehensquote** | **{{ pass_rate }}%** |
 
+{% if failed > 0 %}
+> **{{ failed }} Test(s) fehlgeschlagen.** Siehe Abschnitt "Handlungsbedarf" fuer konkrete Massnahmen.
+{% elif skipped > 0 %}
+> Alle ausgefuehrten Tests bestanden. {{ skipped }} Test(s) wurden uebersprungen.
+{% else %}
+> Alle {{ total }} Tests bestanden.
+{% endif %}
+
 ---
 
-## UI-Konsistenz
+## 1. UI-Konsistenz
 
 {% if ui_results %}
+| Status | Pruefpunkt | Beschreibung |
+|--------|------------|--------------|
 {% for test in ui_results %}
-- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {% if test.failed %}**FEHLER** {% elif test.skipped %}_(übersprungen)_ {% endif %}{{ test.name }}{% if test.message %} — {{ test.message }}{% endif %}
-
+| {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }} |
 {% endfor %}
 {% else %}
-_Keine UI-Tests ausgeführt._
+_Keine UI-Tests ausgefuehrt._
 {% endif %}
 
 ---
 
-## UX-Flows
+## 2. UX-Flows
 
 {% if ux_results %}
+| Status | Pruefpunkt | Beschreibung |
+|--------|------------|--------------|
 {% for test in ux_results %}
-- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {% if test.failed %}**FEHLER** {% elif test.skipped %}_(übersprungen)_ {% endif %}{{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}{% if test.duration_ms > 0 %} ({{ test.duration_ms }}ms){% endif %}
-
+| {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }}{% if test.duration_ms > 0 %} ({{ test.duration_ms }}ms){% endif %} |
 {% endfor %}
 {% else %}
-_Keine UX-Tests ausgeführt._
+_Keine UX-Tests ausgefuehrt._
 {% endif %}
 
 ---
 
-## Accessibility
+## 3. Accessibility
 
 {% if a11y_results %}
+| Status | Pruefpunkt | Beschreibung |
+|--------|------------|--------------|
 {% for test in a11y_results %}
-- [{% if test.passed %}x{% elif test.skipped %}-{% else %} {% endif %}] {% if test.failed %}**FEHLER** {% elif test.skipped %}_(übersprungen)_ {% endif %}{{ test.name }}{% if test.failed and test.message %} — {{ test.message }}{% endif %}
-
+| {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }} |
 {% endfor %}
 {% else %}
-_Keine Accessibility-Tests ausgeführt._
+_Keine Accessibility-Tests ausgefuehrt._
 {% endif %}
 
 ---
 
-## Manuelle Prüfpunkte
+{% if actions %}
+## Handlungsbedarf
 
-Die folgenden Punkte müssen manuell geprüft werden. Bitte nach der Durchsicht abhaken:
+Die folgenden Punkte muessen bearbeitet werden, um die fehlgeschlagenen Tests zu beheben:
 
-### Visuelle Prüfung
-- [ ] Screenshots in `screenshots/` geprüft
+| Nr. | Bereich | Pruefpunkt | Empfohlene Massnahme |
+|-----|---------|------------|----------------------|
+{% for item in actions %}
+| {{ loop.index }} | {{ item.suite | upper }} | {{ item.label }} | {{ item.action }} |
+{% endfor %}
+
+---
+
+{% endif %}
+## Manuelle Pruefpunkte
+
+Die folgenden Punkte muessen manuell geprueft werden:
+
+### Visuelle Pruefung
+- [ ] Screenshots in `screenshots/` geprueft
 - [ ] Gesamteindruck des Chat-Widgets ist ansprechend
-- [ ] Abstände und Proportionen wirken harmonisch
+- [ ] Abstaende und Proportionen wirken harmonisch
 - [ ] Keine visuellen Artefakte oder Darstellungsfehler
 
-### Inhaltliche Prüfung
-- [ ] Begrüßungstext ist freundlich und informativ
+### Inhaltliche Pruefung
+- [ ] Begruessungstext ist freundlich und informativ
 - [ ] Antworten sind inhaltlich korrekt
 - [ ] Ton und Sprache passen zum Europa-Park Markenauftritt
 - [ ] Keine Rechtschreib- oder Grammatikfehler in Bot-Antworten
 
 ### Interaktion
-- [ ] Chat fühlt sich flüssig und responsiv an
-- [ ] Fehlermeldungen sind verständlich
+- [ ] Chat fuehlt sich fluessig und responsiv an
+- [ ] Fehlermeldungen sind verstaendlich
 - [ ] Conversation-Flow ist logisch und hilfreich
 
 ---

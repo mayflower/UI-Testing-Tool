@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -20,6 +21,8 @@ from config.settings import (
     get_selectors,
     get_brand,
     save_selectors,
+    add_environment,
+    remove_environment,
     REPORTS_DIR,
     SCREENSHOTS_DIR,
     ROOT_DIR,
@@ -46,6 +49,31 @@ def api_environments():
     """Alle konfigurierten Umgebungen."""
     envs = get_environments()
     return jsonify(envs)
+
+
+@app.route("/api/environments", methods=["POST"])
+def api_add_environment():
+    """Neue Umgebung hinzufügen oder bestehende aktualisieren."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    url = (data.get("url") or "").strip()
+    description = (data.get("description") or "").strip()
+    login_url = (data.get("login_url") or "").strip()
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+
+    if not name or not url:
+        return jsonify({"error": "Name und URL sind erforderlich"}), 400
+
+    add_environment(name, url, description, login_url, username, password)
+    return jsonify({"status": "ok", "name": name})
+
+
+@app.route("/api/environments/<name>", methods=["DELETE"])
+def api_remove_environment(name):
+    """Umgebung entfernen."""
+    remove_environment(name)
+    return jsonify({"status": "ok"})
 
 
 @app.route("/api/selectors")
@@ -119,7 +147,15 @@ def serve_screenshot(name):
     return send_from_directory(str(SCREENSHOTS_DIR), name)
 
 
-def _run_tests_worker(run_id: str, env_name: str, suite: str | None):
+def _run_tests_worker(
+    run_id: str,
+    env_name: str,
+    suite: str | None,
+    url: str | None = None,
+    login_url: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+):
     """Worker-Thread: Führt pytest aus und sammelt Ergebnisse."""
     run = test_runs[run_id]
     run["status"] = "running"
@@ -139,6 +175,17 @@ def _run_tests_worker(run_id: str, env_name: str, suite: str | None):
         if suite in suite_map:
             cmd.append(suite_map[suite])
 
+    # Umgebungsvariablen für den Subprozess
+    env = dict(os.environ)
+    if url:
+        env["CHATBOT_URL"] = url
+    if login_url:
+        env["CHATBOT_LOGIN_URL"] = login_url
+    if username:
+        env["CHATBOT_USERNAME"] = username
+    if password:
+        env["CHATBOT_PASSWORD"] = password
+
     try:
         proc = subprocess.Popen(
             cmd,
@@ -146,6 +193,7 @@ def _run_tests_worker(run_id: str, env_name: str, suite: str | None):
             stderr=subprocess.STDOUT,
             text=True,
             cwd=str(ROOT_DIR),
+            env=env,
         )
 
         output_lines = []
@@ -164,7 +212,7 @@ def _run_tests_worker(run_id: str, env_name: str, suite: str | None):
         run["finished_at"] = datetime.now().isoformat()
 
         # Report generieren
-        _generate_report_for_run(run, env_name, suite)
+        _generate_report_for_run(run, env_name, suite, url)
 
     except Exception as e:
         run["status"] = "error"
@@ -203,14 +251,17 @@ def _parse_test_line(run: dict, line: str):
         })
 
 
-def _generate_report_for_run(run: dict, env_name: str, suite: str | None):
+def _generate_report_for_run(run: dict, env_name: str, suite: str | None, url: str | None = None):
     """Generiere einen Report nach dem Testlauf."""
     try:
         results = run.get("results", [])
         if not results:
             return
 
-        env = get_environment(env_name)
+        if url:
+            env = {"name": env_name or "custom", "url": url, "description": "Direkte URL"}
+        else:
+            env = get_environment(env_name)
 
         # Ergebnisse fürs Report-Format aufbereiten
         report_results = []
@@ -239,13 +290,18 @@ def _generate_report_for_run(run: dict, env_name: str, suite: str | None):
 def api_run_tests():
     """Starte einen neuen Testlauf."""
     data = request.get_json() or {}
-    env_name = data.get("environment", "dev")
+    env_name = data.get("environment")
     suite = data.get("suite")  # None = alle
+    url = (data.get("url") or "").strip() or None  # Direkte URL
+    login_url = (data.get("login_url") or "").strip() or None
+    username = (data.get("username") or "").strip() or None
+    password = (data.get("password") or "").strip() or None
 
     run_id = str(uuid.uuid4())[:8]
     test_runs[run_id] = {
         "id": run_id,
-        "environment": env_name,
+        "environment": env_name or "custom",
+        "url": url,
         "suite": suite,
         "status": "starting",
         "results": [],
@@ -254,7 +310,7 @@ def api_run_tests():
 
     thread = threading.Thread(
         target=_run_tests_worker,
-        args=(run_id, env_name, suite),
+        args=(run_id, env_name, suite, url, login_url, username, password),
         daemon=True,
     )
     thread.start()
@@ -327,11 +383,25 @@ def api_test_stream(run_id):
 def api_run_discovery():
     """Starte Selektor-Discovery."""
     data = request.get_json() or {}
-    env_name = data.get("environment", "dev")
+    env_name = data.get("environment")
+    url = (data.get("url") or "").strip() or None
+    login_url = (data.get("login_url") or "").strip() or None
+    username = (data.get("username") or "").strip() or None
+    password = (data.get("password") or "").strip() or None
 
     try:
-        from utils.discovery import discover_selectors
-        result = discover_selectors(env_name)
+        from utils.discovery import discover_selectors, discover_selectors_by_url
+
+        if url:
+            result = discover_selectors_by_url(
+                url,
+                login_url=login_url,
+                username=username,
+                password=password,
+            )
+        else:
+            result = discover_selectors(env_name)
+
         if result and result.get("selectors"):
             save_selectors(result["selectors"])
         return jsonify(result)

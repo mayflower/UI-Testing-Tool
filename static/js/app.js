@@ -4,6 +4,7 @@
 
 let currentRunId = null;
 let eventSource = null;
+let savedEnvironments = {};
 
 // ========== Initialisierung ==========
 
@@ -12,6 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
     loadSelectors();
     loadReports();
     loadScreenshots();
+
+    // Enter-Taste im URL-Feld startet Tests
+    document.getElementById("urlInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") runTests();
+    });
 });
 
 // ========== API-Aufrufe ==========
@@ -24,22 +30,121 @@ async function api(url, options = {}) {
     return resp.json();
 }
 
+// ========== URL und Credentials aus dem Eingabefeld ==========
+
+function getUrl() {
+    return document.getElementById("urlInput").value.trim();
+}
+
+function getCredentials() {
+    return {
+        login_url: document.getElementById("loginUrlInput").value.trim(),
+        username: document.getElementById("usernameInput").value.trim(),
+        password: document.getElementById("passwordInput").value.trim(),
+    };
+}
+
 // ========== Umgebungen ==========
 
 async function loadEnvironments() {
     const envs = await api("/api/environments");
-    const select = document.getElementById("envSelect");
-    select.innerHTML = "";
-
+    savedEnvironments = envs;
+    const container = document.getElementById("savedEnvs");
     const names = Object.keys(envs);
+
     document.getElementById("envCount").textContent = names.length;
 
-    names.forEach((name) => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = `${name} — ${envs[name].description || envs[name].url}`;
-        select.appendChild(opt);
+    if (names.length === 0) {
+        container.innerHTML = '<span class="env-hint">Noch keine URLs gespeichert. Gib oben eine URL ein.</span>';
+        return;
+    }
+
+    container.innerHTML = names
+        .map((name) => {
+            const env = envs[name];
+            const desc = env.description ? ` — ${escapeHtml(env.description)}` : "";
+            const hasLogin = env.login_url ? " \uD83D\uDD12" : "";
+            return `
+                <button class="env-chip" onclick="selectEnvironment('${escapeHtml(name)}')" title="${escapeHtml(env.url)}">
+                    <span class="env-chip-name">${escapeHtml(name)}${hasLogin}</span>
+                    <span class="env-chip-desc">${escapeHtml(env.url)}${desc}</span>
+                </button>
+                <button class="env-chip-delete" onclick="deleteEnvironment('${escapeHtml(name)}')" title="Entfernen">&times;</button>
+            `;
+        })
+        .join("");
+}
+
+function selectEnvironment(name) {
+    const env = savedEnvironments[name];
+    if (!env) return;
+
+    document.getElementById("urlInput").value = env.url || "";
+    document.getElementById("loginUrlInput").value = env.login_url || "";
+    document.getElementById("usernameInput").value = env.username || "";
+    document.getElementById("passwordInput").value = env.password || "";
+
+    // Login-Sektion oeffnen falls Credentials vorhanden
+    if (env.login_url || env.username || env.password) {
+        document.getElementById("loginSection").open = true;
+    }
+
+    // Visuelles Feedback
+    const input = document.getElementById("urlInput");
+    input.classList.add("flash");
+    setTimeout(() => input.classList.remove("flash"), 300);
+}
+
+// ========== Umgebung speichern ==========
+
+function saveAsEnvironment() {
+    const url = getUrl();
+    const creds = getCredentials();
+    if (!url) {
+        document.getElementById("urlInput").focus();
+        document.getElementById("urlInput").classList.add("input-error");
+        setTimeout(() => document.getElementById("urlInput").classList.remove("input-error"), 1000);
+        return;
+    }
+
+    document.getElementById("saveEnvUrl").value = url;
+    document.getElementById("saveEnvName").value = "";
+    document.getElementById("saveEnvDesc").value = "";
+    document.getElementById("saveEnvLoginUrl").value = creds.login_url;
+    document.getElementById("saveEnvUsername").value = creds.username;
+    document.getElementById("saveEnvPassword").value = creds.password;
+    document.getElementById("saveEnvModal").style.display = "flex";
+    document.getElementById("saveEnvName").focus();
+}
+
+async function confirmSaveEnvironment() {
+    const name = document.getElementById("saveEnvName").value.trim();
+    const url = document.getElementById("saveEnvUrl").value.trim();
+    const description = document.getElementById("saveEnvDesc").value.trim();
+    const login_url = document.getElementById("saveEnvLoginUrl").value.trim();
+    const username = document.getElementById("saveEnvUsername").value.trim();
+    const password = document.getElementById("saveEnvPassword").value.trim();
+
+    if (!name) {
+        document.getElementById("saveEnvName").classList.add("input-error");
+        setTimeout(() => document.getElementById("saveEnvName").classList.remove("input-error"), 1000);
+        return;
+    }
+
+    await api("/api/environments", {
+        method: "POST",
+        body: JSON.stringify({ name, url, description, login_url, username, password }),
     });
+
+    closeModal("saveEnvModal");
+    loadEnvironments();
+}
+
+async function deleteEnvironment(name) {
+    await api(`/api/environments/${encodeURIComponent(name)}`, {
+        method: "DELETE",
+    });
+    loadEnvironments();
 }
 
 // ========== Selektoren ==========
@@ -62,17 +167,22 @@ async function loadSelectors() {
 // ========== Tests starten ==========
 
 async function runTests() {
-    const env = document.getElementById("envSelect").value;
+    const url = getUrl();
     const suite = document.getElementById("suiteSelect").value || null;
+
+    if (!url) {
+        document.getElementById("urlInput").focus();
+        document.getElementById("urlInput").classList.add("input-error");
+        setTimeout(() => document.getElementById("urlInput").classList.remove("input-error"), 1000);
+        return;
+    }
 
     // UI-Status aktualisieren
     const btn = document.getElementById("btnRunTests");
     btn.disabled = true;
     btn.textContent = "Laeuft...";
-    document.querySelector(".status-dot").classList.add("running");
-    document.getElementById("connectionStatus").querySelector("span:last-child") ||
-        (document.getElementById("connectionStatus").innerHTML =
-            '<span class="status-dot running"></span> Tests laufen...');
+    document.getElementById("connectionStatus").innerHTML =
+        '<span class="status-dot running"></span> Tests laufen...';
 
     // Ergebnisse zuruecksetzen
     clearResults();
@@ -80,15 +190,20 @@ async function runTests() {
     document.getElementById("progressBar").style.display = "block";
     document.getElementById("progressFill").className = "progress-fill indeterminate";
 
-    // Testlauf starten
+    // Testlauf starten – URL und Credentials uebergeben
+    const creds = getCredentials();
     const data = await api("/api/tests/run", {
         method: "POST",
-        body: JSON.stringify({ environment: env, suite: suite }),
+        body: JSON.stringify({
+            url: url,
+            suite: suite,
+            login_url: creds.login_url || null,
+            username: creds.username || null,
+            password: creds.password || null,
+        }),
     });
 
     currentRunId = data.run_id;
-
-    // SSE-Stream fuer Live-Updates
     startEventStream(data.run_id);
 }
 
@@ -115,7 +230,6 @@ function startEventStream(runId) {
     };
 
     eventSource.onerror = () => {
-        // Bei Fehler: Polling als Fallback
         eventSource.close();
         eventSource = null;
         pollStatus(runId);
@@ -126,15 +240,13 @@ async function pollStatus(runId) {
     const interval = setInterval(async () => {
         const status = await api(`/api/tests/status/${runId}`);
 
-        // Neue Ergebnisse anzeigen
-        const displayed = document.querySelectorAll(".test-item").length;
+        const displayed = document.querySelectorAll("#testList .test-item").length;
         if (status.results.length > displayed) {
             for (let i = displayed; i < status.results.length; i++) {
                 addTestResult(status.results[i]);
             }
         }
 
-        // Konsolen-Output
         if (status.output) {
             document.getElementById("consoleOutput").textContent =
                 status.output.join("\n");
@@ -176,20 +288,16 @@ function addTestResult(result) {
         </div>
     `;
 
-    // Zur Gesamtliste hinzufuegen
     document.getElementById("testList").insertAdjacentHTML("beforeend", html);
 
-    // Zur Suite-Liste hinzufuegen
     const suiteMap = { ui: "testListUI", ux: "testListUX", a11y: "testListA11y" };
     const suiteList = suiteMap[result.suite];
     if (suiteList) {
         document.getElementById(suiteList).insertAdjacentHTML("beforeend", html);
     }
 
-    // Zusammenfassung aktualisieren
     updateSummary();
 
-    // Auto-Scroll
     const list = document.getElementById("testList");
     list.scrollTop = list.scrollHeight;
 }
@@ -219,17 +327,14 @@ function onTestsCompleted(data) {
     document.getElementById("connectionStatus").innerHTML =
         '<span class="status-dot"></span> Bereit';
 
-    // Fortschrittsbalken
     const fill = document.getElementById("progressFill");
     fill.className = "progress-fill";
     fill.style.width = "100%";
 
-    // Letzter Lauf
     const total = (data.passed || 0) + (data.failed || 0) + (data.skipped || 0);
     const pct = total > 0 ? Math.round(((data.passed || 0) / total) * 100) : 0;
     document.getElementById("lastRunStatus").textContent = `${pct}% bestanden`;
 
-    // Reports und Screenshots neu laden
     setTimeout(() => {
         loadReports();
         loadScreenshots();
@@ -245,7 +350,6 @@ function switchTab(tabName) {
     document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add("active");
     document.getElementById(`tab-${tabName}`).classList.add("active");
 
-    // Konsolen-Output laden wenn Tab gewechselt wird
     if (tabName === "output" && currentRunId) {
         loadConsoleOutput(currentRunId);
     }
@@ -262,7 +366,14 @@ async function loadConsoleOutput(runId) {
 // ========== Discovery ==========
 
 async function runDiscovery() {
-    const env = document.getElementById("envSelect").value;
+    const url = getUrl();
+    if (!url) {
+        document.getElementById("urlInput").focus();
+        document.getElementById("urlInput").classList.add("input-error");
+        setTimeout(() => document.getElementById("urlInput").classList.remove("input-error"), 1000);
+        return;
+    }
+
     const modal = document.getElementById("discoveryModal");
     const statusEl = document.getElementById("discoveryStatus");
     const resultsEl = document.getElementById("discoveryResults");
@@ -274,9 +385,15 @@ async function runDiscovery() {
     document.getElementById("btnDiscover").disabled = true;
 
     try {
+        const creds = getCredentials();
         const data = await api("/api/discovery/run", {
             method: "POST",
-            body: JSON.stringify({ environment: env }),
+            body: JSON.stringify({
+                url: url,
+                login_url: creds.login_url || null,
+                username: creds.username || null,
+                password: creds.password || null,
+            }),
         });
 
         if (data.error) {
@@ -303,7 +420,6 @@ async function runDiscovery() {
         });
         resultsEl.innerHTML = html;
 
-        // Selektoren-Anzeige aktualisieren
         loadSelectors();
     } catch (e) {
         statusEl.textContent = `Fehler: ${e.message}`;
@@ -377,14 +493,12 @@ function closeModal(id) {
     document.getElementById(id).style.display = "none";
 }
 
-// Escape-Taste schliesst Modals
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
         document.querySelectorAll(".modal").forEach((m) => (m.style.display = "none"));
     }
 });
 
-// Klick ausserhalb des Modals schliesst es
 document.addEventListener("click", (e) => {
     if (e.target.classList.contains("modal")) {
         e.target.style.display = "none";
