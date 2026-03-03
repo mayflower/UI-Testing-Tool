@@ -295,6 +295,8 @@ def _get_jinja_env() -> Environment:
     return Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
         keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
     )
 
 

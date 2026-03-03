@@ -182,7 +182,10 @@
             <div class="modal-content card modal-wide">
                 <div class="modal-header">
                     <h2 id="reportModalTitle">Report</h2>
-                    <button class="btn-close" onclick="closeModal('reportModal')">&times;</button>
+                    <div class="modal-header-actions">
+                        <button class="btn btn-small" id="copyReportBtn" onclick="copyReportToClipboard()">Kopieren</button>
+                        <button class="btn-close" onclick="closeModal('reportModal')">&times;</button>
+                    </div>
                 </div>
                 <pre class="report-content" id="reportModalContent"></pre>
             </div>

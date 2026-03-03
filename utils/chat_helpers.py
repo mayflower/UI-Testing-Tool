@@ -29,12 +29,18 @@ class ChatHelper:
         input_sel = self._selector("input_field")
         send_sel = self._selector("send_button")
 
-        self.page.fill(input_sel, text)
+        # Klick + fill fuer zuverlaessige React-Kompatibilitaet
+        loc = self.page.locator(input_sel)
+        loc.click()
+        loc.fill(text)
         self.page.click(send_sel)
 
     def wait_for_response(self, timeout: int = 10000) -> str | None:
         """
         Warte auf eine neue Bot-Antwort.
+
+        Unterstuetzt Streaming-Antworten: wartet nicht nur auf ein neues
+        Element, sondern auch darauf, dass es tatsaechlich Text enthaelt.
 
         Returns:
             Der Text der Bot-Antwort oder None bei Timeout.
@@ -45,11 +51,19 @@ class ChatHelper:
         initial_count = len(self.page.query_selector_all(bot_sel))
 
         try:
-            # Warte bis eine neue Bot-Nachricht erscheint
+            # Warte bis eine neue Bot-Nachricht mit Inhalt erscheint
+            # (bei Streaming erscheint das Element zuerst leer)
             self.page.wait_for_function(
-                f"""() => document.querySelectorAll('{bot_sel}').length > {initial_count}""",
+                f"""() => {{
+                    const msgs = document.querySelectorAll('{bot_sel}');
+                    if (msgs.length <= {initial_count}) return false;
+                    const last = msgs[msgs.length - 1];
+                    return (last.textContent || '').trim().length > 0;
+                }}""",
                 timeout=timeout,
             )
+            # Kurz warten damit Streaming-Antwort sich stabilisiert
+            self.page.wait_for_timeout(500)
             # Hole die letzte Bot-Nachricht
             messages = self.page.query_selector_all(bot_sel)
             if messages:

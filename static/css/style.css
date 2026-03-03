@@ -495,6 +495,18 @@ select:focus {
     align-items: center;
 }
 
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    border-radius: 4px;
+}
+
 .modal-actions {
     display: flex;
     justify-content: flex-end;

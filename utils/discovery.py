@@ -265,6 +265,31 @@ def _discover_selectors_core(
                 print(f"   ⚠️  {element_name}: nicht gefunden")
             print()
 
+        # Falls bot_message/user_message nicht gefunden: Testnachricht senden
+        input_sel = discovered_selectors.get("input_field")
+        send_sel = discovered_selectors.get("send_button")
+        missing_msg = not discovered_selectors.get("bot_message") or not discovered_selectors.get("user_message")
+
+        if input_sel and send_sel and missing_msg:
+            print("   💬 Sende Testnachricht um Nachrichtenelemente zu finden...")
+            try:
+                page.fill(input_sel, "Hallo")
+                page.click(send_sel)
+                page.wait_for_timeout(5000)
+
+                # Nochmal nach Nachrichtenelementen suchen
+                for msg_key in ("bot_message", "user_message"):
+                    if not discovered_selectors.get(msg_key):
+                        result = _find_element(page, DISCOVERY_PATTERNS[msg_key])
+                        if result:
+                            results[msg_key] = result
+                            discovered_selectors[msg_key] = result["selector"]
+                            print(f"   ✅ {msg_key}: {result['selector']}")
+                        else:
+                            print(f"   ⚠️  {msg_key}: auch nach Testnachricht nicht gefunden")
+            except Exception as e:
+                print(f"   ⚠️  Testnachricht fehlgeschlagen: {e}")
+
         # Screenshot für manuelle Überprüfung
         from config.settings import SCREENSHOTS_DIR
         SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)

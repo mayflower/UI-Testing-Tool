@@ -9,6 +9,7 @@ let savedEnvironments = {};
 // ========== Initialisierung ==========
 
 document.addEventListener("DOMContentLoaded", () => {
+    restoreFormFields();
     loadEnvironments();
     loadSelectors();
     loadReports();
@@ -18,7 +19,42 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("urlInput").addEventListener("keydown", (e) => {
         if (e.key === "Enter") runTests();
     });
+
+    // Formularfelder bei Aenderung in localStorage speichern
+    const persistFields = ["urlInput", "loginUrlInput", "usernameInput", "passwordInput"];
+    persistFields.forEach((id) => {
+        document.getElementById(id).addEventListener("input", saveFormFields);
+    });
 });
+
+// ========== Formularfelder persistieren ==========
+
+function saveFormFields() {
+    const data = {
+        url: document.getElementById("urlInput").value,
+        login_url: document.getElementById("loginUrlInput").value,
+        username: document.getElementById("usernameInput").value,
+        password: document.getElementById("passwordInput").value,
+    };
+    localStorage.setItem("ep_test_form", JSON.stringify(data));
+}
+
+function restoreFormFields() {
+    try {
+        const saved = JSON.parse(localStorage.getItem("ep_test_form"));
+        if (!saved) return;
+        document.getElementById("urlInput").value = saved.url || "";
+        document.getElementById("loginUrlInput").value = saved.login_url || "";
+        document.getElementById("usernameInput").value = saved.username || "";
+        document.getElementById("passwordInput").value = saved.password || "";
+        // Login-Sektion oeffnen falls Credentials vorhanden
+        if (saved.username || saved.password || saved.login_url) {
+            document.getElementById("loginSection").open = true;
+        }
+    } catch (e) {
+        // localStorage nicht verfuegbar oder korrupt
+    }
+}
 
 // ========== API-Aufrufe ==========
 
@@ -63,7 +99,7 @@ async function loadEnvironments() {
         .map((name) => {
             const env = envs[name];
             const desc = env.description ? ` — ${escapeHtml(env.description)}` : "";
-            const hasLogin = env.login_url ? " \uD83D\uDD12" : "";
+            const hasLogin = (env.username || env.login_url) ? " \uD83D\uDD12" : "";
             return `
                 <button class="env-chip" onclick="selectEnvironment('${escapeHtml(name)}')" title="${escapeHtml(env.url)}">
                     <span class="env-chip-name">${escapeHtml(name)}${hasLogin}</span>
@@ -88,6 +124,8 @@ function selectEnvironment(name) {
     if (env.login_url || env.username || env.password) {
         document.getElementById("loginSection").open = true;
     }
+
+    saveFormFields();
 
     // Visuelles Feedback
     const input = document.getElementById("urlInput");
@@ -461,6 +499,27 @@ async function showReport(name) {
     const data = await api(`/api/reports/${encodeURIComponent(name)}`);
     document.getElementById("reportModalContent").textContent =
         data.content || data.error || "Fehler beim Laden";
+}
+
+function copyReportToClipboard() {
+    const content = document.getElementById("reportModalContent").textContent;
+    const btn = document.getElementById("copyReportBtn");
+    navigator.clipboard.writeText(content).then(() => {
+        btn.textContent = "Kopiert!";
+        setTimeout(() => { btn.textContent = "Kopieren"; }, 2000);
+    }).catch(() => {
+        // Fallback fuer aeltere Browser
+        const textarea = document.createElement("textarea");
+        textarea.value = content;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        btn.textContent = "Kopiert!";
+        setTimeout(() => { btn.textContent = "Kopieren"; }, 2000);
+    });
 }
 
 // ========== Screenshots ==========
