@@ -3,7 +3,12 @@
 import pytest
 from playwright.sync_api import sync_playwright
 
-from utils.login_helper import perform_login, perform_login_on_page, needs_login
+from utils.login_helper import (
+    perform_login,
+    perform_login_on_page,
+    has_login_form,
+    needs_login,
+)
 from config.settings import (
     HEADLESS,
     SLOW_MO,
@@ -85,21 +90,24 @@ def page(browser_context, environment):
     username = environment.get("username", "")
     password = environment.get("password", "")
 
-    if needs_login(login_url, username, password):
+    if needs_login(login_url, username, password) and login_url:
+        # Separate Login-Seite: erst Login, dann Chatbot
         try:
-            if login_url:
-                # Separate Login-Seite: erst Login, dann Chatbot
-                perform_login(page, login_url, username, password)
-                page.goto(environment["url"], wait_until="networkidle")
-            else:
-                # Chatbot-URL leitet selbst zur Login-Seite weiter
-                page.goto(environment["url"], wait_until="networkidle")
-                perform_login_on_page(page, username, password)
+            perform_login(page, login_url, username, password)
         except Exception as e:
             page.close()
             pytest.fail(f"Login fehlgeschlagen: {e}")
-    else:
-        page.goto(environment["url"], wait_until="networkidle")
+
+    # Zur Chatbot-URL navigieren
+    page.goto(environment["url"], wait_until="networkidle")
+
+    # Falls wir auf einer Login-Seite gelandet sind (Redirect), einloggen
+    if needs_login(login_url, username, password) and has_login_form(page, wait_seconds=15):
+        try:
+            perform_login_on_page(page, username, password)
+        except Exception as e:
+            page.close()
+            pytest.fail(f"Login fehlgeschlagen: {e}")
     yield page
     page.close()
 

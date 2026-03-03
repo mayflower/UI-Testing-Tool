@@ -11,11 +11,20 @@ from config.settings import (
     get_environment,
     save_selectors,
 )
-from utils.login_helper import perform_login, perform_login_on_page, needs_login
+from utils.login_helper import (
+    perform_login,
+    perform_login_on_page,
+    has_login_form,
+    needs_login,
+)
 
 # Typische Patterns für Chat-Widget-Elemente
 DISCOVERY_PATTERNS = {
     "container": [
+        # CopilotKit
+        "div.copilotKitChat",
+        "div.copilotKitInput",
+        # Generic
         "[class*='chat']",
         "[class*='Chat']",
         "[class*='widget']",
@@ -28,6 +37,9 @@ DISCOVERY_PATTERNS = {
         "[role='complementary']",
     ],
     "input_field": [
+        # CopilotKit
+        "div.copilotKitInput textarea",
+        # Generic
         "textarea[class*='chat']",
         "textarea[class*='input']",
         "textarea[class*='message']",
@@ -39,6 +51,10 @@ DISCOVERY_PATTERNS = {
         "[role='textbox']",
     ],
     "send_button": [
+        # CopilotKit (Send-Button ist der letzte Button in der Controls-Leiste)
+        "div.copilotKitInputControls button.copilotKitInputControlButton:last-child",
+        "button.copilotKitInputControlButton:last-child",
+        # Generic
         "button[class*='send']",
         "button[class*='Send']",
         "button[class*='submit']",
@@ -49,6 +65,9 @@ DISCOVERY_PATTERNS = {
         "button[aria-label*='Senden' i]",
     ],
     "message_list": [
+        # CopilotKit
+        "div.copilotKitMessages",
+        # Generic
         "[class*='message-list']",
         "[class*='messageList']",
         "[class*='messages']",
@@ -58,6 +77,10 @@ DISCOVERY_PATTERNS = {
         "[role='list'][class*='chat']",
     ],
     "bot_message": [
+        # CopilotKit
+        "div.copilotKitAssistantMessage",
+        "[data-message-role='assistant']",
+        # Generic
         "[class*='bot-message']",
         "[class*='botMessage']",
         "[class*='assistant']",
@@ -66,6 +89,10 @@ DISCOVERY_PATTERNS = {
         "[data-sender='bot']",
     ],
     "user_message": [
+        # CopilotKit
+        "div.copilotKitUserMessage",
+        "[data-message-role='user']",
+        # Generic
         "[class*='user-message']",
         "[class*='userMessage']",
         "[class*='user'][class*='message']",
@@ -186,20 +213,12 @@ def _discover_selectors_core(
         page = browser.new_page()
         page.set_default_navigation_timeout(NAVIGATION_TIMEOUT)
 
-        # Login durchfuehren, falls Credentials vorhanden
-        if needs_login(login_url, username, password):
+        # Separate Login-Seite zuerst, falls vorhanden
+        if needs_login(login_url, username, password) and login_url:
             try:
-                if login_url:
-                    # Separate Login-Seite: erst Login, dann Chatbot
-                    print(f"   🔐 Login auf: {login_url}")
-                    perform_login(page, login_url, username, password)
-                    print("   ✅ Login erfolgreich\n")
-                else:
-                    # Chatbot-URL leitet selbst zur Login-Seite weiter
-                    print(f"   🔐 Login auf: {url} (Redirect)")
-                    page.goto(url, wait_until="networkidle")
-                    perform_login_on_page(page, username, password)
-                    print("   ✅ Login erfolgreich\n")
+                print(f"   🔐 Login auf: {login_url}")
+                perform_login(page, login_url, username, password)
+                print("   ✅ Login erfolgreich\n")
             except Exception as e:
                 print(f"   ❌ Login fehlgeschlagen: {e}")
                 browser.close()
@@ -211,6 +230,21 @@ def _discover_selectors_core(
             print(f"   ❌ Seite konnte nicht geladen werden: {e}")
             browser.close()
             return {}
+
+        # Falls wir auf einer Login-Seite gelandet sind (Redirect), einloggen
+        if needs_login(login_url, username, password) and has_login_form(page, wait_seconds=15):
+            try:
+                print(f"   🔐 Login auf: {page.url} (Redirect)")
+                perform_login_on_page(page, username, password)
+                print("   ✅ Login erfolgreich\n")
+                # Nach Login nochmal zur Ziel-URL
+                page.goto(url, wait_until="networkidle")
+            except Exception as e:
+                print(f"   ❌ Login fehlgeschlagen: {e}")
+                browser.close()
+                return {"error": f"Login fehlgeschlagen: {e}"}
+        elif needs_login(login_url, username, password):
+            print(f"   ℹ️  Kein Login-Formular erkannt (URL: {page.url})")
 
         # Warte kurz, damit dynamische Inhalte laden
         page.wait_for_timeout(2000)

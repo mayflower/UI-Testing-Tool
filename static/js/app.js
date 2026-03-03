@@ -475,11 +475,12 @@ async function loadScreenshots() {
         return;
     }
 
+    const cacheBuster = Date.now();
     container.innerHTML = shots
         .map(
             (s) => `
-            <div class="screenshot-thumb" onclick="window.open('${s.path}', '_blank')">
-                <img src="${s.path}" alt="${escapeHtml(s.name)}" loading="lazy">
+            <div class="screenshot-thumb" onclick="window.open('${s.path}?t=${cacheBuster}', '_blank')">
+                <img src="${s.path}?t=${cacheBuster}" alt="${escapeHtml(s.name)}" loading="lazy">
                 <div class="name">${escapeHtml(s.name)}</div>
             </div>
         `

@@ -1,13 +1,9 @@
-# EP-Testing-Tool: CSS-Selektoren des Chat-Widgets
-# Diese Selektoren werden per Auto-Discovery erkannt oder manuell eingetragen.
-# Nutze "python run.py --discover" um die Selektoren automatisch zu erkennen.
-
 chat_widget:
-  container: null
-  input_field: null
-  send_button: null
-  message_list: null
-  bot_message: null
-  user_message: null
-  header: null
+  bot_message: div.copilotKitMessage.copilotKitAssistantMessage
   close_button: null
+  container: div.mb-6
+  header: null
+  input_field: textarea[placeholder]
+  message_list: div.copilotKitMessages
+  send_button: div.copilotKitInputControls button.copilotKitInputControlButton:last-child
+  user_message: div.copilotKitMessage.copilotKitUserMessage

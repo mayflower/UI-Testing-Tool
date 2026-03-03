@@ -35,6 +35,18 @@ LOGIN_FORM_PATTERNS = {
     ],
 }
 
+# Typische Fehlermeldungs-Patterns auf Login-Seiten
+_ERROR_PATTERNS = [
+    "[role='alert']",
+    ".error",
+    ".error-message",
+    ".alert-error",
+    ".alert-danger",
+    "[class*='error']",
+    "[class*='Error']",
+    "[data-testid*='error']",
+]
+
 
 def _find_login_element(page: Page, patterns: list[str]) -> str | None:
     """Finde ein Login-Formular-Element anhand typischer Patterns."""
@@ -46,6 +58,20 @@ def _find_login_element(page: Page, patterns: list[str]) -> str | None:
         except Exception:
             continue
     return None
+
+
+def has_login_form(page: Page, wait_seconds: int = 5) -> bool:
+    """Pruefe ob die aktuelle Seite ein Login-Formular zeigt.
+
+    Wartet kurz auf moegliche JS-Redirects und Hydration.
+    Gibt True zurueck wenn ein Passwort-Feld sichtbar ist.
+    """
+    combined = ", ".join(LOGIN_FORM_PATTERNS["password_field"])
+    try:
+        page.wait_for_selector(combined, state="visible", timeout=wait_seconds * 1000)
+        return True
+    except Exception:
+        return False
 
 
 def perform_login(
@@ -94,17 +120,59 @@ def _fill_and_submit_login(
             "Username- oder Passwort-Feld nicht gefunden."
         )
 
-    page.fill(user_sel, username)
-    page.fill(pass_sel, password)
+    # Felder per Klick fokussieren, leeren, dann Zeichen einzeln tippen
+    # (zuverlaessiger als fill() bei React/Next.js Server Actions)
+    user_loc = page.locator(user_sel)
+    user_loc.click()
+    user_loc.fill("")
+    user_loc.press_sequentially(username, delay=50)
+
+    pass_loc = page.locator(pass_sel)
+    pass_loc.click()
+    pass_loc.fill("")
+    pass_loc.press_sequentially(password, delay=50)
+
+    # URL vor Submit merken, um Redirect zu erkennen
+    url_before = page.url
 
     if submit_sel:
-        page.click(submit_sel)
+        page.locator(submit_sel).click()
     else:
-        page.press(pass_sel, "Enter")
+        pass_loc.press("Enter")
 
     page.wait_for_load_state("networkidle", timeout=timeout)
 
+    # Kurz warten, damit Fehlermeldungen gerendert werden
+    page.wait_for_timeout(1000)
+
+    # Pruefen ob Login fehlgeschlagen ist
+    error = _detect_login_error(page)
+    if error:
+        raise ValueError(f"Login fehlgeschlagen: {error}")
+
+    # Pruefen ob Passwort-Feld noch sichtbar ist (= Login-Seite noch offen)
+    still_on_login = _find_login_element(page, LOGIN_FORM_PATTERNS["password_field"])
+    if still_on_login and page.url == url_before:
+        raise ValueError(
+            "Login fehlgeschlagen: Seite hat sich nach Submit nicht geaendert. "
+            "Credentials pruefen."
+        )
+
     return True
+
+
+def _detect_login_error(page: Page) -> str | None:
+    """Pruefe ob eine Fehlermeldung auf der Seite sichtbar ist."""
+    for selector in _ERROR_PATTERNS:
+        try:
+            el = page.query_selector(selector)
+            if el and el.is_visible():
+                text = el.inner_text().strip()
+                if text:
+                    return text
+        except Exception:
+            continue
+    return None
 
 
 def needs_login(
