@@ -251,6 +251,85 @@ def _parse_test_line(run: dict, line: str):
         })
 
 
+import re
+
+
+def _extract_error_messages(output_lines: list[str]) -> dict[str, str]:
+    """Extrahiere Fehlermeldungen aus dem pytest-Output.
+
+    Sucht nach FAILURES/ERRORS Sektionen und ordnet die Fehlerdetails
+    den jeweiligen Testnamen zu.
+
+    Returns:
+        Dict {test_name: fehlermeldung}
+    """
+    errors: dict[str, str] = {}
+    current_test = None
+    current_lines: list[str] = []
+    in_failures = False
+
+    for line in output_lines:
+        # Beginn der FAILURES/ERRORS Sektion
+        if line.strip().startswith("=") and ("FAILURES" in line or "ERRORS" in line):
+            in_failures = True
+            continue
+
+        # Ende der Sektion (naechste ===... Zeile)
+        if in_failures and line.strip().startswith("=") and "short test summary" in line:
+            # Letzten Test speichern
+            if current_test and current_lines:
+                errors[current_test] = _clean_error_block(current_lines)
+            break
+
+        if not in_failures:
+            continue
+
+        # Neuer Test-Header: ___ TestClass.test_name ___
+        header_match = re.match(r"^_+ (.+?) _+$", line.strip())
+        if header_match:
+            # Vorherigen Test speichern
+            if current_test and current_lines:
+                errors[current_test] = _clean_error_block(current_lines)
+            # Neuen Test starten
+            header_text = header_match.group(1)
+            # "ERROR at setup of TestClass.test_name" oder "TestClass.test_name"
+            header_text = re.sub(r"^ERROR at (?:setup|teardown) of ", "", header_text)
+            # Testname ist der letzte Teil nach dem Punkt
+            current_test = header_text.split(".")[-1] if "." in header_text else header_text
+            current_lines = []
+        elif current_test:
+            current_lines.append(line)
+
+    # Letzten Block speichern falls Schleife ohne break endet
+    if current_test and current_lines:
+        errors[current_test] = _clean_error_block(current_lines)
+
+    return errors
+
+
+def _clean_error_block(lines: list[str]) -> str:
+    """Bereinige einen Fehlerblock: nur die relevanten Zeilen behalten."""
+    relevant = []
+    for line in lines:
+        stripped = line.strip()
+        # Leere Zeilen und Datei-Pfade ueberspringen
+        if not stripped:
+            continue
+        # E-Zeilen (pytest Error-Output) sind am wichtigsten
+        if stripped.startswith("E "):
+            relevant.append(stripped[2:].strip())
+        # AssertionError Zeilen
+        elif "Error" in stripped and "::" not in stripped:
+            relevant.append(stripped)
+
+    if not relevant:
+        # Fallback: letzte nicht-leere Zeilen
+        non_empty = [l.strip() for l in lines if l.strip()]
+        relevant = non_empty[-3:] if len(non_empty) > 3 else non_empty
+
+    return " | ".join(relevant[:5])  # Max 5 Zeilen, mit | getrennt
+
+
 def _generate_report_for_run(run: dict, env_name: str, suite: str | None, url: str | None = None):
     """Generiere einen Report nach dem Testlauf."""
     try:
@@ -263,13 +342,18 @@ def _generate_report_for_run(run: dict, env_name: str, suite: str | None, url: s
         else:
             env = get_environment(env_name)
 
+        # Fehlermeldungen aus dem gesamten Output extrahieren
+        error_messages = _extract_error_messages(run.get("output", []))
+
         # Ergebnisse fürs Report-Format aufbereiten
         report_results = []
         for r in results:
+            test_name = r["name"]
+            message = error_messages.get(test_name, "")
             report_results.append({
-                "name": r["name"].replace("test_", "").replace("_", " ").capitalize(),
+                "name": test_name,
                 "outcome": r["outcome"],
-                "message": "",
+                "message": message,
                 "duration": 0,
                 "suite": r["suite"],
             })

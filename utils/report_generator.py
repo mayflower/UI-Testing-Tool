@@ -363,6 +363,7 @@ def generate_report(
                     "suite": suite_name,
                     "label": r["label"],
                     "action": r["action"],
+                    "message": r["message"],
                 })
 
     now = datetime.now()

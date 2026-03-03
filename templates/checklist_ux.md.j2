@@ -14,7 +14,8 @@
 |--------|------------|--------------|
 {% for test in results %}
 | {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }}{% if test.duration_ms > 0 %} ({{ test.duration_ms }}ms){% endif %} |
-{% endfor %}
+{% if test.failed and test.message %}| | | _Fehler: {{ test.message }}_ |
+{% endif %}{% endfor %}
 
 {% if actions %}
 ---
@@ -24,7 +25,7 @@
 | Nr. | Pruefpunkt | Empfohlene Massnahme |
 |-----|------------|----------------------|
 {% for item in actions %}
-| {{ loop.index }} | {{ item.label }} | {{ item.action }} |
+| {{ loop.index }} | {{ item.label }} | {{ item.action }}{% if item.message %} — _{{ item.message }}_ {% endif %} |
 {% endfor %}
 
 {% endif %}

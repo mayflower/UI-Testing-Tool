@@ -36,7 +36,8 @@
 |--------|------------|--------------|
 {% for test in ui_results %}
 | {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }} |
-{% endfor %}
+{% if test.failed and test.message %}| | | _Fehler: {{ test.message }}_ |
+{% endif %}{% endfor %}
 {% else %}
 _Keine UI-Tests ausgefuehrt._
 {% endif %}
@@ -50,7 +51,8 @@ _Keine UI-Tests ausgefuehrt._
 |--------|------------|--------------|
 {% for test in ux_results %}
 | {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }}{% if test.duration_ms > 0 %} ({{ test.duration_ms }}ms){% endif %} |
-{% endfor %}
+{% if test.failed and test.message %}| | | _Fehler: {{ test.message }}_ |
+{% endif %}{% endfor %}
 {% else %}
 _Keine UX-Tests ausgefuehrt._
 {% endif %}
@@ -64,7 +66,8 @@ _Keine UX-Tests ausgefuehrt._
 |--------|------------|--------------|
 {% for test in a11y_results %}
 | {% if test.passed %}Bestanden{% elif test.failed %}**FEHLER**{% elif test.skipped %}Uebersprungen{% endif %} | {{ test.label }} | {{ test.description }} |
-{% endfor %}
+{% if test.failed and test.message %}| | | _Fehler: {{ test.message }}_ |
+{% endif %}{% endfor %}
 {% else %}
 _Keine Accessibility-Tests ausgefuehrt._
 {% endif %}
@@ -79,7 +82,7 @@ Die folgenden Punkte muessen bearbeitet werden, um die fehlgeschlagenen Tests zu
 | Nr. | Bereich | Pruefpunkt | Empfohlene Massnahme |
 |-----|---------|------------|----------------------|
 {% for item in actions %}
-| {{ loop.index }} | {{ item.suite | upper }} | {{ item.label }} | {{ item.action }} |
+| {{ loop.index }} | {{ item.suite | upper }} | {{ item.label }} | {{ item.action }}{% if item.message %} — _{{ item.message }}_ {% endif %} |
 {% endfor %}
 
 ---
