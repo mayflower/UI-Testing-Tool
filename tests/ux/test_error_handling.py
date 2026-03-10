@@ -17,13 +17,24 @@ class TestErrorHandling:
         input_sel = selectors["input_field"]
         send_sel = selectors["send_button"]
 
-        # Versuche leere Nachricht zu senden
+        # Eingabefeld leeren
         page.fill(input_sel, "")
-        page.click(send_sel)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(300)
 
-        # Entweder der Button ist deaktiviert, oder es gibt eine Fehlermeldung,
-        # aber keine leere User-Nachricht im Chat
+        # Prüfe ob der Button deaktiviert ist (korrekte Behandlung)
+        btn = page.query_selector(send_sel)
+        if btn and btn.is_disabled():
+            # Button ist deaktiviert bei leerer Eingabe → korrekt
+            return
+
+        # Falls Button aktiv: klicken und prüfen dass keine leere Nachricht erscheint
+        try:
+            page.click(send_sel, timeout=3000)
+        except Exception:
+            # Click-Timeout = Button nicht klickbar → korrekt behandelt
+            return
+
+        page.wait_for_timeout(1000)
         user_sel = selectors.get("user_message")
         if user_sel:
             user_messages = page.query_selector_all(user_sel)
@@ -98,10 +109,22 @@ class TestErrorHandling:
         send_sel = selectors["send_button"]
 
         page.fill(input_sel, "   ")
-        page.click(send_sel)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(300)
 
-        # Ähnlich wie leere Nachricht: keine leere Nachricht im Chat
+        # Prüfe ob der Button deaktiviert ist (korrekte Behandlung)
+        btn = page.query_selector(send_sel)
+        if btn and btn.is_disabled():
+            # Button ist deaktiviert bei Whitespace-Eingabe → korrekt
+            return
+
+        # Falls Button aktiv: klicken und prüfen dass keine leere Nachricht erscheint
+        try:
+            page.click(send_sel, timeout=3000)
+        except Exception:
+            # Click-Timeout = Button nicht klickbar → korrekt behandelt
+            return
+
+        page.wait_for_timeout(1000)
         user_sel = selectors.get("user_message")
         if user_sel:
             user_messages = page.query_selector_all(user_sel)

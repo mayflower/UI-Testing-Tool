@@ -35,24 +35,51 @@ class ChatHelper:
         loc.fill(text)
         self.page.click(send_sel)
 
-    def wait_for_response(self, timeout: int = 10000) -> str | None:
+    # Texte die auf UI-Kontrollelemente hinweisen (nicht Bot-Antworten)
+    _FEEDBACK_PATTERNS = ("was this helpful", "give feedback", "hilfreich")
+
+    def wait_for_response(self, timeout: int = 30000) -> str | None:
         """
         Warte auf eine neue Bot-Antwort.
 
         Unterstuetzt Streaming-Antworten: wartet nicht nur auf ein neues
         Element, sondern auch darauf, dass es tatsaechlich Text enthaelt.
+        Faellt auf message_list-basierte Erkennung zurueck falls
+        bot_message-Selektor nicht funktioniert.
 
         Returns:
             Der Text der Bot-Antwort oder None bei Timeout.
         """
-        bot_sel = self._selector("bot_message")
+        bot_sel = self.selectors.get("bot_message")
+        msg_list_sel = self.selectors.get("message_list")
 
-        # Zähle aktuelle Bot-Nachrichten
+        # Snapshot VOR dem Warten fuer den Fallback
+        initial_text_len = 0
+        if msg_list_sel:
+            initial_text_len = self.page.evaluate(f"""() => {{
+                const el = document.querySelector('{msg_list_sel}');
+                return el ? el.textContent.trim().length : 0;
+            }}""") or 0
+
+        # Primaerstrategie: bot_message Selektor
+        if bot_sel:
+            result = self._wait_for_bot_message(bot_sel, timeout)
+            if result and not self._is_feedback_text(result):
+                return result
+
+        # Fallback: Textaenderung im message_list Container erkennen
+        if msg_list_sel:
+            return self._wait_for_new_text_in_container(
+                msg_list_sel, timeout, initial_text_len
+            )
+
+        return None
+
+    def _wait_for_bot_message(self, bot_sel: str, timeout: int) -> str | None:
+        """Warte auf neues Element das zum bot_message Selektor passt."""
         initial_count = len(self.page.query_selector_all(bot_sel))
 
         try:
-            # Warte bis eine neue Bot-Nachricht mit Inhalt erscheint
-            # (bei Streaming erscheint das Element zuerst leer)
             self.page.wait_for_function(
                 f"""() => {{
                     const msgs = document.querySelectorAll('{bot_sel}');
@@ -64,16 +91,53 @@ class ChatHelper:
             )
             # Kurz warten damit Streaming-Antwort sich stabilisiert
             self.page.wait_for_timeout(500)
-            # Hole die letzte Bot-Nachricht
             messages = self.page.query_selector_all(bot_sel)
             if messages:
                 return messages[-1].text_content().strip()
         except Exception:
             return None
-
         return None
 
-    def send_and_wait(self, text: str, timeout: int = 10000) -> dict:
+    def _wait_for_new_text_in_container(
+        self, container_sel: str, timeout: int, initial_len: int = 0
+    ) -> str | None:
+        """Fallback: Erkenne neue Bot-Antwort anhand von Textaenderung im Container."""
+        try:
+            # Warte bis der Container deutlich mehr Text hat (>20 Zeichen neu)
+            self.page.wait_for_function(
+                f"""(initLen) => {{
+                    const el = document.querySelector('{container_sel}');
+                    if (!el) return false;
+                    const newLen = el.textContent.trim().length;
+                    return newLen > initLen + 20;
+                }}""",
+                arg=initial_len,
+                timeout=timeout,
+            )
+            # Warten damit Streaming sich stabilisiert
+            self.page.wait_for_timeout(1000)
+            # Neuen Text extrahieren
+            full_text = self.page.evaluate(f"""() => {{
+                const el = document.querySelector('{container_sel}');
+                return el ? el.textContent.trim() : '';
+            }}""") or ""
+            # Der neue Text ist die Bot-Antwort (nach dem initialen Text)
+            new_text = full_text[initial_len:].strip()
+            # Feedback-Text am Ende entfernen
+            for pattern in self._FEEDBACK_PATTERNS:
+                idx = new_text.lower().find(pattern)
+                if idx > 0:
+                    new_text = new_text[:idx].strip()
+            return new_text if len(new_text) > 5 else None
+        except Exception:
+            return None
+
+    def _is_feedback_text(self, text: str) -> bool:
+        """Pruefe ob der Text ein UI-Kontrollelement ist statt einer Bot-Antwort."""
+        lower = text.lower()
+        return any(p in lower for p in self._FEEDBACK_PATTERNS)
+
+    def send_and_wait(self, text: str, timeout: int = 30000) -> dict:
         """
         Sende eine Nachricht und warte auf die Antwort.
         Misst gleichzeitig die Antwortzeit.

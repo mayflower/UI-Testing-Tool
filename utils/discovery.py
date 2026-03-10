@@ -80,10 +80,13 @@ DISCOVERY_PATTERNS = {
         # CopilotKit
         "div.copilotKitAssistantMessage",
         "[data-message-role='assistant']",
-        # Generic
+        # ecki.ai / mAIstack custom patterns
+        "[class*='assistant-message-content']",
+        "[class*='assistant-message']:not([class*='feedback'])",
+        # Generic (exclude feedback/control elements)
         "[class*='bot-message']",
         "[class*='botMessage']",
-        "[class*='assistant']",
+        "[class*='assistant']:not([class*='feedback']):not([class*='action']):not([class*='control'])",
         "[class*='bot'][class*='message']",
         "[data-role='assistant']",
         "[data-sender='bot']",
@@ -114,6 +117,177 @@ DISCOVERY_PATTERNS = {
 }
 
 
+def _inspect_message_dom(page: Page, msg_list_sel: str | None) -> list[dict]:
+    """Inspiziere die DOM-Struktur innerhalb des Nachrichtencontainers.
+
+    Geht bis zu 2 Ebenen tief, damit auch verschachtelte Nachrichten
+    (z.B. in copilotKitMessagesContainer) erkannt werden.
+    """
+    if not msg_list_sel:
+        print("   ⚠️  Kein message_list-Selektor — DOM-Inspektion uebersprungen")
+        return []
+
+    try:
+        # Sammle Elemente bis 2 Ebenen tief
+        elements = page.evaluate(f"""() => {{
+            const root = document.querySelector('{msg_list_sel}');
+            if (!root) return [];
+            const results = [];
+            function inspect(el, depth, prefix) {{
+                for (const child of el.children) {{
+                    const attrs = {{}};
+                    for (const a of child.attributes) {{
+                        if (a.name.startsWith('data-') || a.name === 'role' || a.name === 'class')
+                            attrs[a.name] = a.value;
+                    }}
+                    results.push({{
+                        depth: depth,
+                        prefix: prefix,
+                        tag: child.tagName.toLowerCase(),
+                        classes: child.className || '',
+                        text: (child.textContent || '').trim().substring(0, 80),
+                        attrs: attrs,
+                        childCount: child.children.length,
+                    }});
+                    if (depth < 2 && child.children.length > 0) {{
+                        inspect(child, depth + 1, prefix + '  ');
+                    }}
+                }}
+            }}
+            inspect(root, 1, '');
+            return results;
+        }}""")
+
+        print(f"\n   🔎 DOM-Inspektion ({len(elements)} Elemente):")
+        for el in elements:
+            indent = "      " + el.get("prefix", "")
+            print(f"{indent}<{el['tag']}> class=\"{el['classes']}\"")
+            for k, v in el.get("attrs", {}).items():
+                if k != "class":
+                    print(f"{indent}  {k}=\"{v}\"")
+            if el["text"]:
+                text_preview = el['text'][:60].replace('\n', ' ')
+                print(f"{indent}  Text: \"{text_preview}\"")
+        print()
+        return elements
+    except Exception as e:
+        print(f"   ⚠️  DOM-Inspektion fehlgeschlagen: {e}")
+        return []
+
+
+import re
+
+# Muster fuer generierte/instabile CSS-Klassen die uebersprungen werden sollen
+_GENERATED_CLASS_RE = re.compile(
+    r"^(jsx-[a-f0-9]+|css-[a-z0-9]+|sc-[a-zA-Z]+|_[a-zA-Z0-9]{5,}|[a-f0-9]{8,})$"
+)
+
+
+def _pick_stable_class(classes: str) -> str | None:
+    """Waehle eine stabile CSS-Klasse und ueberspringe generierte Hashes.
+
+    Generierte Klassen (styled-jsx, CSS Modules, styled-components) aendern
+    sich bei jedem Build und sind als Selektor ungeeignet.
+    """
+    for cls in classes.split():
+        if not _GENERATED_CLASS_RE.match(cls):
+            return cls
+    return None
+
+
+def _find_bot_message_by_content(page: Page, msg_list_sel: str | None) -> dict | None:
+    """Fallback: Finde Bot-Nachrichten anhand von Textinhalt.
+
+    Sucht innerhalb des Nachrichtencontainers nach Elementen mit
+    substanziellem Text (>50 Zeichen), die keine UI-Kontrollelemente sind.
+    """
+    if not msg_list_sel:
+        return None
+
+    try:
+        result = page.evaluate(f"""() => {{
+            const root = document.querySelector('{msg_list_sel}');
+            if (!root) return null;
+
+            // Suche rekursiv nach Elementen mit langem Textinhalt
+            const candidates = [];
+            function scan(el, depth) {{
+                if (depth > 6) return;
+                const text = (el.textContent || '').trim();
+                const directText = Array.from(el.childNodes)
+                    .filter(n => n.nodeType === 3)
+                    .map(n => n.textContent.trim())
+                    .join('');
+                const cls = el.className || '';
+
+                // UI-Kontrollelemente ueberspringen
+                if (/feedback|action|control|button|icon|thumb/i.test(cls)) return;
+                if (el.tagName === 'BUTTON' || el.tagName === 'SVG') return;
+
+                // Element mit substanziellem Text?
+                if (text.length > 50 && el.children.length <= 10) {{
+                    candidates.push({{
+                        tag: el.tagName.toLowerCase(),
+                        classes: cls,
+                        id: el.id || '',
+                        textLen: text.length,
+                        text: text.substring(0, 80),
+                        depth: depth,
+                    }});
+                }}
+                for (const child of el.children) {{
+                    scan(child, depth + 1);
+                }}
+            }}
+            scan(root, 0);
+
+            if (candidates.length === 0) return null;
+
+            // Bevorzuge Elemente auf mittlerer Tiefe mit viel Text
+            // (nicht zu flach = Container, nicht zu tief = Inline-Element)
+            candidates.sort((a, b) => {{
+                // Tiefe 2-4 bevorzugen
+                const aScore = (a.depth >= 2 && a.depth <= 4 ? 100 : 0) + a.textLen;
+                const bScore = (b.depth >= 2 && b.depth <= 4 ? 100 : 0) + b.textLen;
+                return bScore - aScore;
+            }});
+            return candidates[0];
+        }}""")
+
+        if not result:
+            return None
+
+        # Baue Selektor
+        tag = result["tag"]
+        classes = result.get("classes", "")
+        element_id = result.get("id", "")
+
+        if element_id:
+            best_selector = f"#{element_id}"
+        elif classes:
+            stable = _pick_stable_class(classes)
+            if stable:
+                best_selector = f"{tag}.{stable}"
+            else:
+                return None  # Nur generierte Klassen, kein stabiler Selektor
+        else:
+            return None
+
+        return {
+            "selector": best_selector,
+            "matched_pattern": "content-based-fallback",
+            "tag": tag,
+            "id": element_id,
+            "classes": classes,
+            "text_preview": result.get("text", ""),
+            "count": 1,
+        }
+
+    except Exception as e:
+        print(f"   ⚠️  Content-basierte Suche fehlgeschlagen: {e}")
+        return None
+
+
 def _find_element(page: Page, patterns: list[str]) -> dict | None:
     """Suche ein Element anhand einer Liste von CSS-Selektoren."""
     for selector in patterns:
@@ -130,8 +304,12 @@ def _find_element(page: Page, patterns: list[str]) -> dict | None:
                 if element_id:
                     best_selector = f"#{element_id}"
                 elif classes and isinstance(classes, str):
-                    first_class = classes.split()[0]
-                    best_selector = f"{tag}.{first_class}"
+                    stable = _pick_stable_class(classes)
+                    if stable:
+                        best_selector = f"{tag}.{stable}"
+                    else:
+                        # Nur generierte Klassen — benutze das Suchmuster direkt
+                        best_selector = selector
                 else:
                     best_selector = selector
 
@@ -273,9 +451,15 @@ def _discover_selectors_core(
         if input_sel and send_sel and missing_msg:
             print("   💬 Sende Testnachricht um Nachrichtenelemente zu finden...")
             try:
-                page.fill(input_sel, "Hallo")
+                page.locator(input_sel).click()
+                page.locator(input_sel).fill("Hallo")
                 page.click(send_sel)
-                page.wait_for_timeout(5000)
+                page.wait_for_timeout(8000)
+
+                # DOM-Inspektion: alle Elemente im Message-Container ausgeben
+                msg_list_sel = discovered_selectors.get("message_list")
+                dom_info = _inspect_message_dom(page, msg_list_sel)
+                results["_dom_inspection"] = dom_info
 
                 # Nochmal nach Nachrichtenelementen suchen
                 for msg_key in ("bot_message", "user_message"):
@@ -285,6 +469,17 @@ def _discover_selectors_core(
                             results[msg_key] = result
                             discovered_selectors[msg_key] = result["selector"]
                             print(f"   ✅ {msg_key}: {result['selector']}")
+                        elif msg_key == "bot_message":
+                            # Content-basierter Fallback fuer bot_message
+                            print("   🔎 Versuche Content-basierte Erkennung...")
+                            result = _find_bot_message_by_content(page, msg_list_sel)
+                            if result:
+                                results[msg_key] = result
+                                discovered_selectors[msg_key] = result["selector"]
+                                print(f"   ✅ {msg_key}: {result['selector']} (Content-Fallback)")
+                                print(f"      Text: \"{result['text_preview']}\"")
+                            else:
+                                print(f"   ⚠️  {msg_key}: auch nach Testnachricht nicht gefunden")
                         else:
                             print(f"   ⚠️  {msg_key}: auch nach Testnachricht nicht gefunden")
             except Exception as e:

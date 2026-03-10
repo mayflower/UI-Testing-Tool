@@ -5,6 +5,7 @@
 let currentRunId = null;
 let eventSource = null;
 let savedEnvironments = {};
+let editingEnvName = null;
 
 // ========== Initialisierung ==========
 
@@ -101,11 +102,14 @@ async function loadEnvironments() {
             const desc = env.description ? ` — ${escapeHtml(env.description)}` : "";
             const hasLogin = (env.username || env.login_url) ? " \uD83D\uDD12" : "";
             return `
-                <button class="env-chip" onclick="selectEnvironment('${escapeHtml(name)}')" title="${escapeHtml(env.url)}">
-                    <span class="env-chip-name">${escapeHtml(name)}${hasLogin}</span>
-                    <span class="env-chip-desc">${escapeHtml(env.url)}${desc}</span>
-                </button>
-                <button class="env-chip-delete" onclick="deleteEnvironment('${escapeHtml(name)}')" title="Entfernen">&times;</button>
+                <div class="env-entry">
+                    <button class="env-chip" onclick="selectEnvironment('${escapeHtml(name)}')" title="${escapeHtml(env.url)}">
+                        <span class="env-chip-name">${escapeHtml(name)}${hasLogin}</span>
+                        <span class="env-chip-desc">${escapeHtml(env.url)}${desc}</span>
+                    </button>
+                    <button class="env-chip-action env-chip-edit" onclick="editEnvironment('${escapeHtml(name)}')" title="Bearbeiten">&#9998;</button>
+                    <button class="env-chip-action env-chip-delete" onclick="deleteEnvironment('${escapeHtml(name)}')" title="Entfernen">&times;</button>
+                </div>
             `;
         })
         .join("");
@@ -145,7 +149,10 @@ function saveAsEnvironment() {
         return;
     }
 
+    editingEnvName = null;
+    document.getElementById("saveEnvModalTitle").textContent = "URL als Umgebung speichern";
     document.getElementById("saveEnvUrl").value = url;
+    document.getElementById("saveEnvUrl").readOnly = true;
     document.getElementById("saveEnvName").value = "";
     document.getElementById("saveEnvDesc").value = "";
     document.getElementById("saveEnvLoginUrl").value = creds.login_url;
@@ -169,13 +176,45 @@ async function confirmSaveEnvironment() {
         return;
     }
 
+    // Bei Umbenennung: alten Eintrag loeschen
+    if (editingEnvName && editingEnvName !== name) {
+        await api(`/api/environments/${encodeURIComponent(editingEnvName)}`, {
+            method: "DELETE",
+        });
+    }
+
     await api("/api/environments", {
         method: "POST",
         body: JSON.stringify({ name, url, description, login_url, username, password }),
     });
 
+    editingEnvName = null;
     closeModal("saveEnvModal");
     loadEnvironments();
+}
+
+function editEnvironment(name) {
+    const env = savedEnvironments[name];
+    if (!env) return;
+
+    editingEnvName = name;
+    document.getElementById("saveEnvModalTitle").textContent = `Umgebung \u201E${name}\u201C bearbeiten`;
+    document.getElementById("saveEnvName").value = name;
+    document.getElementById("saveEnvUrl").value = env.url || "";
+    document.getElementById("saveEnvUrl").readOnly = false;
+    document.getElementById("saveEnvDesc").value = env.description || "";
+    document.getElementById("saveEnvLoginUrl").value = env.login_url || "";
+    document.getElementById("saveEnvUsername").value = env.username || "";
+    document.getElementById("saveEnvPassword").value = env.password || "";
+
+    // Login-Sektion oeffnen falls Credentials vorhanden
+    const loginDetails = document.querySelector("#saveEnvModal details");
+    if (loginDetails && (env.login_url || env.username || env.password)) {
+        loginDetails.open = true;
+    }
+
+    document.getElementById("saveEnvModal").style.display = "flex";
+    document.getElementById("saveEnvUrl").focus();
 }
 
 async function deleteEnvironment(name) {
@@ -219,6 +258,7 @@ async function runTests() {
     const btn = document.getElementById("btnRunTests");
     btn.disabled = true;
     btn.textContent = "Laeuft...";
+    document.getElementById("btnCancel").style.display = "";
     document.getElementById("connectionStatus").innerHTML =
         '<span class="status-dot running"></span> Tests laufen...';
 
@@ -243,6 +283,20 @@ async function runTests() {
 
     currentRunId = data.run_id;
     startEventStream(data.run_id);
+}
+
+async function cancelTests() {
+    if (!currentRunId) return;
+
+    const cancelBtn = document.getElementById("btnCancel");
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = "Wird abgebrochen...";
+
+    try {
+        await api(`/api/tests/cancel/${currentRunId}`, { method: "POST" });
+    } catch (e) {
+        // Ignorieren – Stream-Ende raeumt auf
+    }
 }
 
 function startEventStream(runId) {
@@ -362,8 +416,16 @@ function onTestsCompleted(data) {
     btn.disabled = false;
     btn.textContent = "Tests starten";
 
+    const cancelBtn = document.getElementById("btnCancel");
+    cancelBtn.style.display = "none";
+    cancelBtn.disabled = false;
+    cancelBtn.textContent = "Abbrechen";
+
+    const cancelled = data.status === "cancelled";
     document.getElementById("connectionStatus").innerHTML =
-        '<span class="status-dot"></span> Bereit';
+        cancelled
+            ? '<span class="status-dot"></span> Abgebrochen'
+            : '<span class="status-dot"></span> Bereit';
 
     const fill = document.getElementById("progressFill");
     fill.className = "progress-fill";
@@ -456,6 +518,26 @@ async function runDiscovery() {
                 </div>
             `;
         });
+        // DOM-Inspektion anzeigen falls vorhanden
+        const domInfo = (data.details || {})._dom_inspection;
+        if (domInfo && domInfo.length > 0) {
+            html += `<div class="discovery-item" style="margin-top:0.75rem;"><span class="label" style="font-weight:600;">DOM-Inspektion (Nachrichten-Container)</span></div>`;
+            domInfo.forEach((el, i) => {
+                const attrs = Object.entries(el.attrs || {})
+                    .filter(([k]) => k !== "class")
+                    .map(([k, v]) => `${k}="${v}"`)
+                    .join(" ");
+                const info = `&lt;${el.tag}&gt; class="${escapeHtml(el.classes)}"${attrs ? " " + escapeHtml(attrs) : ""}`;
+                const text = el.text ? ` — "${escapeHtml(el.text.substring(0, 50))}"` : "";
+                html += `
+                    <div class="discovery-item">
+                        <span class="label">[${i}]</span>
+                        <span class="value" style="font-family:monospace;font-size:0.75rem;">${info}${text}</span>
+                    </div>
+                `;
+            });
+        }
+
         resultsEl.innerHTML = html;
 
         loadSelectors();

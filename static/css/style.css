@@ -191,6 +191,16 @@ select:focus {
     background: #cbd5e0;
 }
 
+.btn-danger {
+    background: #e53e3e;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c53030;
+    box-shadow: var(--shadow);
+}
+
 .btn-close {
     background: none;
     border: none;
@@ -673,16 +683,27 @@ select:focus {
     white-space: nowrap;
 }
 
-.env-chip-delete {
+.env-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+}
+
+.env-chip-action {
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 1.125rem;
+    font-size: 1rem;
     cursor: pointer;
-    padding: 0 0.25rem;
+    padding: 0 0.125rem;
     line-height: 1;
     opacity: 0.5;
     transition: all 0.15s ease;
+}
+
+.env-chip-edit:hover {
+    color: var(--primary);
+    opacity: 1;
 }
 
 .env-chip-delete:hover {

@@ -5,14 +5,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
 import time
 import uuid
 from datetime import datetime
-from pathlib import Path
-
 from flask import Flask, render_template, jsonify, request, Response
 
 from config.settings import (
@@ -195,15 +194,27 @@ def _run_tests_worker(
             cwd=str(ROOT_DIR),
             env=env,
         )
+        run["_proc"] = proc
 
         output_lines = []
         for line in proc.stdout:
+            # Abbruch prüfen
+            if run.get("_cancel"):
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                run["status"] = "cancelled"
+                run["finished_at"] = datetime.now().isoformat()
+                return
+
             line = line.rstrip()
             output_lines.append(line)
             run["output"] = output_lines
 
-            # Testergebnisse parsen
-            if "PASSED" in line or "FAILED" in line or "SKIPPED" in line or "ERROR" in line:
+            # Testergebnisse parsen (Regex in _parse_test_line filtert selbst)
+            if "::" in line:
                 _parse_test_line(run, line)
 
         proc.wait()
@@ -217,41 +228,49 @@ def _run_tests_worker(
     except Exception as e:
         run["status"] = "error"
         run["error"] = str(e)
+    finally:
+        run.pop("_proc", None)
+
+
+_TEST_LINE_RE = re.compile(
+    r"^(tests/.+?::.+?)\s+(PASSED|FAILED|SKIPPED|ERROR)"
+)
 
 
 def _parse_test_line(run: dict, line: str):
-    """Parse eine pytest-Output-Zeile nach Testergebnissen."""
-    result = None
-    if " PASSED" in line:
-        result = "passed"
-    elif " FAILED" in line:
-        result = "failed"
-    elif " SKIPPED" in line:
-        result = "skipped"
-    elif " ERROR" in line:
-        result = "error"
+    """Parse eine pytest-Output-Zeile nach Testergebnissen.
 
-    if result:
-        # Testname extrahieren
-        parts = line.split("::")
-        name = parts[-1].split(" ")[0] if parts else line
-        suite = "unknown"
-        if "tests/ui/" in line:
-            suite = "ui"
-        elif "tests/ux/" in line:
-            suite = "ux"
-        elif "tests/a11y/" in line:
-            suite = "a11y"
+    Erkennt nur echte pytest-verbose-Ergebniszeilen im Format:
+      tests/ui/test_file.py::TestClass::test_method PASSED  [ 5%]
 
-        run.setdefault("results", []).append({
-            "name": name,
-            "outcome": result,
-            "suite": suite,
-            "raw": line.strip(),
-        })
+    Ignoriert Short-Test-Summary-Zeilen (z.B. 'FAILED tests/...' oder
+    'ERROR tests/...') wo das Keyword am Zeilenanfang steht.
+    """
+    match = _TEST_LINE_RE.match(line.strip())
+    if not match:
+        return
 
+    test_path = match.group(1)  # z.B. tests/ui/test_file.py::TestClass::test_method
+    outcome = match.group(2).lower()  # passed, failed, skipped, error
 
-import re
+    # Testname = letzter Teil nach ::
+    parts = test_path.split("::")
+    name = parts[-1] if parts else test_path
+
+    suite = "unknown"
+    if "tests/ui/" in test_path:
+        suite = "ui"
+    elif "tests/ux/" in test_path:
+        suite = "ux"
+    elif "tests/a11y/" in test_path:
+        suite = "a11y"
+
+    run.setdefault("results", []).append({
+        "name": name,
+        "outcome": outcome,
+        "suite": suite,
+        "raw": line.strip(),
+    })
 
 
 def _extract_error_messages(output_lines: list[str]) -> dict[str, str]:
@@ -411,7 +430,7 @@ def api_test_status(run_id):
 
     results = run.get("results", [])
     passed = sum(1 for r in results if r["outcome"] == "passed")
-    failed = sum(1 for r in results if r["outcome"] == "failed")
+    failed = sum(1 for r in results if r["outcome"] in ("failed", "error"))
     skipped = sum(1 for r in results if r["outcome"] == "skipped")
 
     return jsonify({
@@ -434,6 +453,27 @@ def api_test_status(run_id):
     })
 
 
+@app.route("/api/tests/cancel/<run_id>", methods=["POST"])
+def api_cancel_tests(run_id):
+    """Laufenden Testlauf abbrechen."""
+    run = test_runs.get(run_id)
+    if not run:
+        return jsonify({"error": "Testlauf nicht gefunden"}), 404
+
+    if run["status"] != "running":
+        return jsonify({"error": "Testlauf laeuft nicht"}), 400
+
+    # Signal an den Worker-Thread
+    run["_cancel"] = True
+
+    # Prozess direkt beenden falls vorhanden
+    proc = run.get("_proc")
+    if proc and proc.poll() is None:
+        proc.terminate()
+
+    return jsonify({"status": "ok", "message": "Abbruch angefordert"})
+
+
 @app.route("/api/tests/stream/<run_id>")
 def api_test_stream(run_id):
     """Server-Sent Events Stream für Live-Updates."""
@@ -451,9 +491,9 @@ def api_test_stream(run_id):
                     yield f"data: {json.dumps({'type': 'result', 'data': r})}\n\n"
                 last_count = len(results)
 
-            if run["status"] in ("completed", "error"):
+            if run["status"] in ("completed", "error", "cancelled"):
                 passed = sum(1 for r in results if r["outcome"] == "passed")
-                failed = sum(1 for r in results if r["outcome"] == "failed")
+                failed = sum(1 for r in results if r["outcome"] in ("failed", "error"))
                 skipped = sum(1 for r in results if r["outcome"] == "skipped")
                 yield f"data: {json.dumps({'type': 'done', 'data': {'status': run['status'], 'passed': passed, 'failed': failed, 'skipped': skipped, 'report_name': run.get('report_name')}})}\n\n"
                 break
@@ -487,7 +527,14 @@ def api_run_discovery():
             result = discover_selectors(env_name)
 
         if result and result.get("selectors"):
-            save_selectors(result["selectors"])
+            # Merge: nur gefundene Selektoren ueberschreiben, null-Werte behalten
+            existing = get_selectors()
+            merged = dict(existing)
+            for key, value in result["selectors"].items():
+                if value is not None:
+                    merged[key] = value
+            save_selectors(merged)
+            result["selectors"] = merged
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

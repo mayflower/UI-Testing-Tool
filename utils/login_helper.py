@@ -84,8 +84,15 @@ def perform_login(
     """Fuehre Login auf einer separaten Login-Seite durch.
 
     Navigiert zur login_url, fuellt das Formular aus und submittet.
+    Falls bereits eingeloggt (kein Login-Formular sichtbar), wird
+    der Login uebersprungen.
     """
     page.goto(login_url, wait_until="networkidle", timeout=timeout)
+
+    # Bereits eingeloggt? (Server hat von Login-Seite weggeleitet)
+    if not _find_login_element(page, LOGIN_FORM_PATTERNS["password_field"]):
+        return True
+
     return _fill_and_submit_login(page, username, password, timeout)
 
 

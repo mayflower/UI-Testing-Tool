@@ -1,9 +1,9 @@
 chat_widget:
-  bot_message: div.copilotKitAssistantMessage
+  bot_message: div.flex
   close_button: null
   container: div.copilotKitChat
   header: null
   input_field: div.copilotKitInput textarea
   message_list: div.copilotKitMessages
   send_button: button.copilotKitInputControlButton
-  user_message: div.copilotKitUserMessage
+  user_message: div.copilotKitMessage

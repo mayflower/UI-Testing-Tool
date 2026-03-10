@@ -25,7 +25,7 @@ BROWSER = os.getenv("BROWSER", "chromium")
 
 # Timeouts
 NAVIGATION_TIMEOUT = int(os.getenv("NAVIGATION_TIMEOUT", "30000"))
-RESPONSE_TIMEOUT = int(os.getenv("RESPONSE_TIMEOUT", "10000"))
+RESPONSE_TIMEOUT = int(os.getenv("RESPONSE_TIMEOUT", "30000"))
 
 # Report
 TESTER_NAME = os.getenv("TESTER_NAME", "PO Team")

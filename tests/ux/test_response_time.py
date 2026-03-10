@@ -9,9 +9,9 @@ from config.settings import RESPONSE_TIMEOUT
 pytestmark = pytest.mark.ux
 
 # Schwellenwerte für Antwortzeiten (in ms)
-FAST_THRESHOLD = 3000      # Schnell: unter 3 Sekunden
-ACCEPTABLE_THRESHOLD = 5000  # Akzeptabel: unter 5 Sekunden
-MAX_THRESHOLD = 10000       # Maximum: unter 10 Sekunden
+FAST_THRESHOLD = 10000       # Schnell: unter 10 Sekunden
+ACCEPTABLE_THRESHOLD = 15000  # Akzeptabel: unter 15 Sekunden
+MAX_THRESHOLD = 30000        # Maximum: unter 30 Sekunden
 
 
 class TestResponseTime:

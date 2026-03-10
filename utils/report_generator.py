@@ -312,15 +312,16 @@ def _enrich_result(result: dict) -> dict:
 
     info = TEST_DESCRIPTIONS.get(clean_name, {})
 
+    outcome = result.get("outcome", "unknown")
     return {
         "test_id": clean_name,
         "label": info.get("label", clean_name.replace("_", " ").capitalize()),
         "description": info.get("description", ""),
         "action": info.get("action", ""),
-        "passed": result.get("outcome") == "passed",
-        "failed": result.get("outcome") == "failed",
-        "skipped": result.get("outcome") == "skipped",
-        "outcome": result.get("outcome", "unknown"),
+        "passed": outcome == "passed",
+        "failed": outcome in ("failed", "error"),
+        "skipped": outcome == "skipped",
+        "outcome": outcome,
         "message": result.get("message", ""),
         "duration_ms": round(result.get("duration", 0) * 1000),
     }
@@ -353,7 +354,7 @@ def generate_report(
 
     total = len(results)
     passed = sum(1 for r in results if r["outcome"] == "passed")
-    failed = sum(1 for r in results if r["outcome"] == "failed")
+    failed = sum(1 for r in results if r["outcome"] in ("failed", "error"))
     skipped = sum(1 for r in results if r["outcome"] == "skipped")
 
     # Handlungsempfehlungen sammeln (nur fuer fehlgeschlagene Tests)
