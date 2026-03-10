@@ -14,6 +14,7 @@ CONFIG_DIR = ROOT_DIR / "config"
 REPORTS_DIR = ROOT_DIR / "reports"
 SCREENSHOTS_DIR = ROOT_DIR / "screenshots"
 TEMPLATES_DIR = ROOT_DIR / "templates"
+AUTH_DIR = ROOT_DIR / ".auth"
 
 # .env laden
 load_dotenv(ROOT_DIR / ".env")

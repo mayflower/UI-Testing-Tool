@@ -1,5 +1,7 @@
 """Pytest-Konfiguration und Browser-Fixtures für das EP-Testing-Tool."""
 
+import time
+
 import pytest
 from playwright.sync_api import sync_playwright
 
@@ -15,10 +17,14 @@ from config.settings import (
     BROWSER,
     NAVIGATION_TIMEOUT,
     SCREENSHOTS_DIR,
+    AUTH_DIR,
     get_environment,
     get_selectors,
     get_brand,
 )
+
+# Gespeicherte Session gilt fuer 8 Stunden
+_AUTH_STATE_MAX_AGE = 8 * 3600
 
 
 def pytest_addoption(parser):
@@ -64,17 +70,72 @@ def brand():
     return get_brand()
 
 
+def _get_auth_state_path(environment: dict) -> str:
+    """Pfad zur gespeicherten Session-Datei fuer diese Umgebung."""
+    # Dateiname basiert auf der URL, damit verschiedene Umgebungen
+    # eigene State-Dateien haben.
+    safe_name = environment.get("url", "default").replace("https://", "").replace("/", "_").strip("_")
+    return str(AUTH_DIR / f"state_{safe_name}.json")
+
+
+def _auth_state_is_fresh(state_path: str) -> bool:
+    """Prueft ob eine gespeicherte Session noch gueltig (nicht abgelaufen) ist."""
+    from pathlib import Path
+    p = Path(state_path)
+    if not p.exists():
+        return False
+    age = time.time() - p.stat().st_mtime
+    return age < _AUTH_STATE_MAX_AGE
+
+
 @pytest.fixture(scope="session")
 def browser_context(environment):
-    """Playwright-Browser-Context für die gesamte Test-Session."""
+    """Playwright-Browser-Context fuer die gesamte Test-Session.
+
+    Laedt eine gespeicherte Session (Storage State) falls vorhanden und
+    aktuell, um SSO/Login bei Folgelaeufen zu ueberspringen.
+    """
+    login_url = environment.get("login_url", "")
+    username = environment.get("username", "")
+    password = environment.get("password", "")
+    state_path = _get_auth_state_path(environment)
+
     with sync_playwright() as p:
         browser_type = getattr(p, BROWSER)
         browser = browser_type.launch(headless=HEADLESS, slow_mo=SLOW_MO)
-        context = browser.new_context(
-            viewport={"width": 1280, "height": 720},
-            locale="de-DE",
-        )
+
+        context_kwargs = {
+            "viewport": {"width": 1280, "height": 720},
+            "locale": "de-DE",
+        }
+
+        # Gespeicherte Session laden falls frisch genug
+        if _auth_state_is_fresh(state_path):
+            context_kwargs["storage_state"] = state_path
+
+        context = browser.new_context(**context_kwargs)
         context.set_default_navigation_timeout(NAVIGATION_TIMEOUT)
+
+        # Einmalig einloggen falls keine gespeicherte Session vorhanden
+        if not _auth_state_is_fresh(state_path) and needs_login(username, password):
+            setup_page = context.new_page()
+            try:
+                if login_url:
+                    perform_login(setup_page, login_url, username, password)
+                setup_page.goto(environment["url"], wait_until="networkidle")
+                if has_login_form(setup_page, wait_seconds=10):
+                    perform_login_on_page(setup_page, username, password)
+                    setup_page.wait_for_load_state("networkidle")
+                # Session speichern
+                AUTH_DIR.mkdir(parents=True, exist_ok=True)
+                context.storage_state(path=state_path)
+            except Exception as e:
+                setup_page.close()
+                context.close()
+                browser.close()
+                pytest.fail(f"Login fehlgeschlagen: {e}")
+            setup_page.close()
+
         yield context
         context.close()
         browser.close()
@@ -82,32 +143,27 @@ def browser_context(environment):
 
 @pytest.fixture
 def page(browser_context, environment):
-    """Frische Seite für jeden Test, navigiert zum Chatbot."""
+    """Frische Seite fuer jeden Test, navigiert zum Chatbot."""
     page = browser_context.new_page()
 
-    # Login durchfuehren, falls Credentials vorhanden
-    login_url = environment.get("login_url", "")
-    username = environment.get("username", "")
-    password = environment.get("password", "")
-
-    if needs_login(login_url, username, password) and login_url:
-        # Separate Login-Seite: erst Login, dann Chatbot
-        try:
-            perform_login(page, login_url, username, password)
-        except Exception as e:
-            page.close()
-            pytest.fail(f"Login fehlgeschlagen: {e}")
-
-    # Zur Chatbot-URL navigieren
+    # Zur Chatbot-URL navigieren (Session-Cookies aus Storage State aktiv)
     page.goto(environment["url"], wait_until="networkidle")
 
-    # Falls wir auf einer Login-Seite gelandet sind (Redirect), einloggen
-    if needs_login(login_url, username, password) and has_login_form(page, wait_seconds=15):
+    # Sicherheitsnetz: falls doch auf Login-Seite gelandet (z.B. Session abgelaufen)
+    username = environment.get("username", "")
+    password = environment.get("password", "")
+    if needs_login(username, password) and has_login_form(page, wait_seconds=5):
         try:
             perform_login_on_page(page, username, password)
+            page.wait_for_load_state("networkidle")
+            # Abgelaufene Session-Datei loeschen damit naechster Lauf neu einloggt
+            from pathlib import Path
+            state_path = _get_auth_state_path(environment)
+            Path(state_path).unlink(missing_ok=True)
         except Exception as e:
             page.close()
             pytest.fail(f"Login fehlgeschlagen: {e}")
+
     yield page
     page.close()
 
