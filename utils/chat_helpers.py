@@ -75,6 +75,29 @@ class ChatHelper:
 
         return None
 
+    def _wait_for_streaming_stable(
+        self, get_text_fn, stable_ms: int = 1500, max_wait_ms: int = 20000
+    ) -> str:
+        """Wartet bis der Text einer Streaming-Antwort sich nicht mehr aendert.
+
+        Pollt alle 300ms den aktuellen Text. Gibt ihn zurueck sobald er fuer
+        stable_ms unveraendert geblieben ist oder max_wait_ms abgelaufen sind.
+        """
+        deadline = time.time() + max_wait_ms / 1000
+        last_text = ""
+        last_change = time.time()
+
+        while time.time() < deadline:
+            current = get_text_fn() or ""
+            if current != last_text:
+                last_text = current
+                last_change = time.time()
+            elif current and (time.time() - last_change) >= stable_ms / 1000:
+                break
+            self.page.wait_for_timeout(300)
+
+        return last_text
+
     def _wait_for_bot_message(self, bot_sel: str, timeout: int) -> str | None:
         """Warte auf neues Element das zum bot_message Selektor passt."""
         initial_count = len(self.page.query_selector_all(bot_sel))
@@ -89,14 +112,15 @@ class ChatHelper:
                 }}""",
                 timeout=timeout,
             )
-            # Kurz warten damit Streaming-Antwort sich stabilisiert
-            self.page.wait_for_timeout(500)
-            messages = self.page.query_selector_all(bot_sel)
-            if messages:
-                return messages[-1].text_content().strip()
         except Exception:
             return None
-        return None
+
+        # Streaming stabilisieren: warten bis Text aufhoert zu wachsen
+        def get_text():
+            messages = self.page.query_selector_all(bot_sel)
+            return messages[-1].text_content().strip() if messages else ""
+
+        return get_text_result if (get_text_result := self._wait_for_streaming_stable(get_text)) else None
 
     def _wait_for_new_text_in_container(
         self, container_sel: str, timeout: int, initial_len: int = 0
@@ -114,23 +138,25 @@ class ChatHelper:
                 arg=initial_len,
                 timeout=timeout,
             )
-            # Warten damit Streaming sich stabilisiert
-            self.page.wait_for_timeout(1000)
-            # Neuen Text extrahieren
-            full_text = self.page.evaluate(f"""() => {{
+        except Exception:
+            return None
+
+        # Streaming stabilisieren: warten bis Text aufhoert zu wachsen
+        def get_container_text():
+            return self.page.evaluate(f"""() => {{
                 const el = document.querySelector('{container_sel}');
                 return el ? el.textContent.trim() : '';
             }}""") or ""
-            # Der neue Text ist die Bot-Antwort (nach dem initialen Text)
-            new_text = full_text[initial_len:].strip()
-            # Feedback-Text am Ende entfernen
-            for pattern in self._FEEDBACK_PATTERNS:
-                idx = new_text.lower().find(pattern)
-                if idx > 0:
-                    new_text = new_text[:idx].strip()
-            return new_text if len(new_text) > 5 else None
-        except Exception:
-            return None
+
+        full_text = self._wait_for_streaming_stable(get_container_text)
+        new_text = full_text[initial_len:].strip()
+
+        # Feedback-Text am Ende entfernen
+        for pattern in self._FEEDBACK_PATTERNS:
+            idx = new_text.lower().find(pattern)
+            if idx > 0:
+                new_text = new_text[:idx].strip()
+        return new_text if len(new_text) > 5 else None
 
     def _is_feedback_text(self, text: str) -> bool:
         """Pruefe ob der Text ein UI-Kontrollelement ist statt einer Bot-Antwort."""
