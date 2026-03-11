@@ -61,6 +61,50 @@
                     <!-- Wird dynamisch gefuellt -->
                 </div>
 
+                <!-- Jira-Einstellungen (aufklappbar) -->
+                <details class="login-section" id="jiraSection">
+                    <summary class="login-toggle">Jira-Integration (optional)</summary>
+                    <div class="login-fields">
+                        <div class="form-row" style="margin-top: 0.75rem;">
+                            <div class="form-group">
+                                <label for="jiraBaseUrl">Jira-URL</label>
+                                <input type="url" id="jiraBaseUrl" class="text-input"
+                                       placeholder="https://yourcompany.atlassian.net"
+                                       spellcheck="false">
+                            </div>
+                            <div class="form-group">
+                                <label for="jiraEmail">E-Mail</label>
+                                <input type="email" id="jiraEmail" class="text-input"
+                                       placeholder="user@company.com">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-top: 0.5rem;">
+                            <div class="form-group">
+                                <label for="jiraApiToken">API-Token</label>
+                                <input type="password" id="jiraApiToken" class="text-input"
+                                       placeholder="API-Token (von id.atlassian.com)">
+                            </div>
+                            <div class="form-group">
+                                <label for="jiraProjectKey">Projektschluessel</label>
+                                <input type="text" id="jiraProjectKey" class="text-input"
+                                       placeholder="z.B. PROJ" style="text-transform:uppercase;">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-top: 0.5rem; align-items: flex-end;">
+                            <div class="form-group">
+                                <label for="jiraIssueType">Tickettyp</label>
+                                <input type="text" id="jiraIssueType" class="text-input"
+                                       placeholder="Bug" value="Bug">
+                            </div>
+                            <div class="form-group form-actions" style="margin-bottom: 0;">
+                                <button class="btn btn-small btn-secondary" onclick="saveJiraConfig()">Speichern</button>
+                                <button class="btn btn-small btn-secondary" onclick="testJiraConnection()" id="btnJiraTest">Verbindung testen</button>
+                            </div>
+                        </div>
+                        <p id="jiraStatus" style="font-size:0.8rem;margin-top:0.4rem;color:var(--text-muted);"></p>
+                    </div>
+                </details>
+
                 <div class="form-row" style="margin-top: 1rem;">
                     <div class="form-group">
                         <label for="suiteSelect">Testsuite</label>
@@ -129,6 +173,9 @@
                 <div class="results-header">
                     <h2>Testergebnisse</h2>
                     <div class="results-summary" id="resultsSummary"></div>
+                    <button id="btnJiraExport" class="btn btn-small btn-secondary" onclick="openJiraExportModal()" style="display:none;" title="Fehlgeschlagene Tests als Jira-Tickets erstellen">
+                        Jira Tickets erstellen
+                    </button>
                 </div>
 
                 <!-- Fortschrittsbalken -->
@@ -203,6 +250,23 @@
                     </div>
                 </div>
                 <pre class="report-content" id="reportModalContent"></pre>
+            </div>
+        </div>
+
+        <!-- Jira-Export-Modal -->
+        <div class="modal" id="jiraExportModal" style="display:none;">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h2>Jira Tickets erstellen</h2>
+                    <button class="btn-close" onclick="closeModal('jiraExportModal')">&times;</button>
+                </div>
+                <p id="jiraExportSummary" style="margin-bottom:1rem;color:var(--text-muted);font-size:0.9rem;"></p>
+                <div id="jiraExportList" style="margin-bottom:1rem;max-height:250px;overflow-y:auto;"></div>
+                <div id="jiraExportStatus" style="font-size:0.85rem;min-height:1.5rem;margin-bottom:0.75rem;"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal('jiraExportModal')">Abbrechen</button>
+                    <button class="btn btn-primary" id="btnJiraCreate" onclick="createJiraTickets()">Tickets erstellen</button>
+                </div>
             </div>
         </div>
 

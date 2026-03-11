@@ -130,3 +130,16 @@ def get_brand() -> dict:
     """Lade Branding-Konfiguration."""
     data = _load_yaml("brand.yaml")
     return data.get("brand", {})
+
+
+def get_jira_config() -> dict:
+    """Lade Jira-Konfiguration."""
+    data = _load_yaml("jira.yaml")
+    return data.get("jira", {})
+
+
+def save_jira_config(config: dict) -> None:
+    """Speichere Jira-Konfiguration."""
+    path = CONFIG_DIR / "jira.yaml"
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump({"jira": config}, f, default_flow_style=False, allow_unicode=True)

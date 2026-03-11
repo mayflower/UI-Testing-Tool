@@ -22,6 +22,8 @@ from config.settings import (
     save_selectors,
     add_environment,
     remove_environment,
+    get_jira_config,
+    save_jira_config,
     REPORTS_DIR,
     SCREENSHOTS_DIR,
     ROOT_DIR,
@@ -551,6 +553,86 @@ def api_run_discovery():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/jira/config", methods=["GET"])
+def api_jira_config_get():
+    """Jira-Konfiguration lesen (api_token wird maskiert)."""
+    config = get_jira_config()
+    safe = dict(config)
+    if safe.get("api_token"):
+        safe["api_token"] = "***"
+    return jsonify(safe)
+
+
+@app.route("/api/jira/config", methods=["POST"])
+def api_jira_config_save():
+    """Jira-Konfiguration speichern."""
+    data = request.get_json() or {}
+    existing = get_jira_config()
+
+    # api_token nur aktualisieren wenn ein echter Wert gesendet wurde
+    new_token = (data.get("api_token") or "").strip()
+    config = {
+        "base_url": (data.get("base_url") or "").strip() or None,
+        "email": (data.get("email") or "").strip() or None,
+        "api_token": new_token if new_token and new_token != "***" else existing.get("api_token"),
+        "project_key": (data.get("project_key") or "").strip() or None,
+        "issue_type": (data.get("issue_type") or "Bug").strip(),
+    }
+    save_jira_config(config)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/jira/test-connection")
+def api_jira_test_connection():
+    """Testet ob Jira erreichbar und Zugangsdaten korrekt sind."""
+    from utils.jira_helper import test_connection
+    return jsonify(test_connection())
+
+
+@app.route("/api/jira/projects")
+def api_jira_projects():
+    """Gibt alle zugaenglichen Jira-Projekte zurueck."""
+    from utils.jira_helper import get_projects
+    try:
+        projects = get_projects()
+        return jsonify({"ok": True, "projects": projects})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+
+@app.route("/api/jira/create-tickets", methods=["POST"])
+def api_jira_create_tickets():
+    """Erstellt Jira-Tickets fuer fehlgeschlagene Tests eines Testlaufs."""
+    from utils.jira_helper import create_tickets_for_failures
+    data = request.get_json() or {}
+    run_id = data.get("run_id")
+    project_key = (data.get("project_key") or "").strip() or None
+    issue_type = (data.get("issue_type") or "").strip() or None
+    environment_url = (data.get("url") or "").strip()
+
+    if not run_id:
+        return jsonify({"ok": False, "error": "run_id fehlt"}), 400
+
+    run = test_runs.get(run_id)
+    if not run:
+        return jsonify({"ok": False, "error": "Testlauf nicht gefunden"}), 404
+
+    results = run.get("results", [])
+    if not environment_url:
+        environment_url = run.get("url") or ""
+
+    try:
+        created = create_tickets_for_failures(
+            results=results,
+            environment_url=environment_url,
+            project_key=project_key,
+            issue_type=issue_type,
+        )
+        return jsonify({"ok": True, "tickets": created})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
 
 
 def main():

@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadSelectors();
     loadReports();
     loadScreenshots();
+    loadJiraConfig();
 
     // Enter-Taste im URL-Feld startet Tests
     document.getElementById("urlInput").addEventListener("keydown", (e) => {
@@ -468,6 +469,14 @@ function onTestsCompleted(data) {
     document.getElementById("lastRunStatus").textContent = `${pct}% bestanden`;
 
     stopLiveBrowser();
+
+    // Jira-Export-Button einblenden falls Fehler vorhanden und Jira konfiguriert
+    const jiraConfig = await api("/api/jira/config").catch(() => ({}));
+    const hasFailed = (data.failed || 0) > 0;
+    const jiraConfigured = !!(jiraConfig.base_url && jiraConfig.project_key);
+    document.getElementById("btnJiraExport").style.display =
+        hasFailed && jiraConfigured ? "" : "none";
+
     setTimeout(() => {
         loadReports();
         loadScreenshots();
@@ -679,6 +688,149 @@ document.addEventListener("click", (e) => {
         e.target.style.display = "none";
     }
 });
+
+// ========== Jira-Integration ==========
+
+async function loadJiraConfig() {
+    try {
+        const config = await api("/api/jira/config");
+        if (config.base_url) document.getElementById("jiraBaseUrl").value = config.base_url;
+        if (config.email) document.getElementById("jiraEmail").value = config.email;
+        if (config.api_token) document.getElementById("jiraApiToken").value = config.api_token; // "***" wenn gesetzt
+        if (config.project_key) document.getElementById("jiraProjectKey").value = config.project_key;
+        if (config.issue_type) document.getElementById("jiraIssueType").value = config.issue_type;
+
+        // Jira-Sektion automatisch oeffnen falls konfiguriert
+        if (config.base_url) {
+            document.getElementById("jiraSection").open = true;
+        }
+    } catch (e) {
+        // Jira nicht konfiguriert – kein Fehler
+    }
+}
+
+async function saveJiraConfig() {
+    const config = {
+        base_url: document.getElementById("jiraBaseUrl").value.trim(),
+        email: document.getElementById("jiraEmail").value.trim(),
+        api_token: document.getElementById("jiraApiToken").value.trim(),
+        project_key: document.getElementById("jiraProjectKey").value.trim().toUpperCase(),
+        issue_type: document.getElementById("jiraIssueType").value.trim() || "Bug",
+    };
+
+    const status = document.getElementById("jiraStatus");
+    status.textContent = "Wird gespeichert...";
+
+    const result = await api("/api/jira/config", {
+        method: "POST",
+        body: JSON.stringify(config),
+    });
+
+    status.textContent = result.ok ? "Gespeichert." : `Fehler: ${result.error}`;
+    status.style.color = result.ok ? "var(--success)" : "var(--danger)";
+    setTimeout(() => { status.textContent = ""; }, 3000);
+}
+
+async function testJiraConnection() {
+    const status = document.getElementById("jiraStatus");
+    const btn = document.getElementById("btnJiraTest");
+    btn.disabled = true;
+    status.textContent = "Verbindung wird getestet...";
+    status.style.color = "var(--text-muted)";
+
+    // Erst speichern, dann testen
+    await saveJiraConfig();
+
+    const result = await api("/api/jira/test-connection");
+    if (result.ok) {
+        status.textContent = `Verbindung OK — eingeloggt als: ${result.user}`;
+        status.style.color = "var(--success)";
+    } else {
+        status.textContent = `Fehler: ${result.error}`;
+        status.style.color = "var(--danger)";
+    }
+    btn.disabled = false;
+}
+
+function openJiraExportModal() {
+    const modal = document.getElementById("jiraExportModal");
+    const listEl = document.getElementById("jiraExportList");
+    const summaryEl = document.getElementById("jiraExportSummary");
+    const statusEl = document.getElementById("jiraExportStatus");
+
+    // Fehlgeschlagene Tests aus der Ergebnisliste ermitteln
+    const failedItems = document.querySelectorAll("#testList .test-item.failed");
+    const count = failedItems.length;
+
+    summaryEl.textContent = count === 0
+        ? "Keine fehlgeschlagenen Tests gefunden."
+        : `${count} fehlgeschlagene Test${count === 1 ? "" : "s"} werden als Jira-Ticket${count === 1 ? "" : "s"} erstellt.`;
+
+    listEl.innerHTML = Array.from(failedItems).map(item => {
+        const name = item.querySelector(".name")?.textContent || "";
+        const suite = item.querySelector(".suite-tag")?.textContent || "";
+        return `<div style="padding:0.3rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+            <span style="color:var(--danger);">&#10007;</span>
+            <span style="margin-left:0.4rem;">${escapeHtml(name)}</span>
+            <span class="suite-tag ${suite.toLowerCase()}" style="float:right;">${escapeHtml(suite)}</span>
+        </div>`;
+    }).join("") || '<p style="color:var(--text-muted);font-size:0.85rem;">Keine fehlgeschlagenen Tests.</p>';
+
+    statusEl.textContent = "";
+    document.getElementById("btnJiraCreate").disabled = count === 0;
+    modal.style.display = "flex";
+}
+
+async function createJiraTickets() {
+    if (!currentRunId) return;
+
+    const statusEl = document.getElementById("jiraExportStatus");
+    const btn = document.getElementById("btnJiraCreate");
+    btn.disabled = true;
+    statusEl.style.color = "var(--text-muted)";
+    statusEl.textContent = "Tickets werden erstellt...";
+
+    const projectKey = document.getElementById("jiraProjectKey").value.trim().toUpperCase();
+    const issueType = document.getElementById("jiraIssueType").value.trim() || "Bug";
+    const url = document.getElementById("urlInput").value.trim();
+
+    const result = await api("/api/jira/create-tickets", {
+        method: "POST",
+        body: JSON.stringify({
+            run_id: currentRunId,
+            project_key: projectKey || null,
+            issue_type: issueType,
+            url: url,
+        }),
+    });
+
+    if (!result.ok) {
+        statusEl.textContent = `Fehler: ${result.error}`;
+        statusEl.style.color = "var(--danger)";
+        btn.disabled = false;
+        return;
+    }
+
+    const tickets = result.tickets || [];
+    const succeeded = tickets.filter(t => t.ok);
+    const failed = tickets.filter(t => !t.ok);
+
+    let html = "";
+    if (succeeded.length > 0) {
+        html += succeeded.map(t =>
+            `<div>&#10003; <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.key)}</a> — ${escapeHtml(t.test_name)}</div>`
+        ).join("");
+    }
+    if (failed.length > 0) {
+        html += failed.map(t =>
+            `<div style="color:var(--danger);">&#10007; ${escapeHtml(t.test_name)}: ${escapeHtml(t.error)}</div>`
+        ).join("");
+    }
+
+    document.getElementById("jiraExportList").innerHTML = html || "Keine Tickets erstellt.";
+    statusEl.textContent = `${succeeded.length} Ticket${succeeded.length === 1 ? "" : "s"} erstellt${failed.length > 0 ? `, ${failed.length} fehlgeschlagen` : ""}.`;
+    statusEl.style.color = failed.length > 0 ? "var(--warning)" : "var(--success)";
+}
 
 // ========== Hilfsfunktionen ==========
 
