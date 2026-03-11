@@ -392,7 +392,7 @@ def _discover_selectors_core(
         page.set_default_navigation_timeout(NAVIGATION_TIMEOUT)
 
         # Separate Login-Seite zuerst, falls vorhanden
-        if needs_login(login_url, username, password) and login_url:
+        if needs_login(username, password) and login_url:
             try:
                 print(f"   🔐 Login auf: {login_url}")
                 perform_login(page, login_url, username, password)
@@ -410,7 +410,7 @@ def _discover_selectors_core(
             return {}
 
         # Falls wir auf einer Login-Seite gelandet sind (Redirect), einloggen
-        if needs_login(login_url, username, password) and has_login_form(page, wait_seconds=15):
+        if needs_login(username, password) and has_login_form(page, wait_seconds=15):
             try:
                 print(f"   🔐 Login auf: {page.url} (Redirect)")
                 perform_login_on_page(page, username, password)
@@ -421,7 +421,7 @@ def _discover_selectors_core(
                 print(f"   ❌ Login fehlgeschlagen: {e}")
                 browser.close()
                 return {"error": f"Login fehlgeschlagen: {e}"}
-        elif needs_login(login_url, username, password):
+        elif needs_login(username, password):
             print(f"   ℹ️  Kein Login-Formular erkannt (URL: {page.url})")
 
         # Warte kurz, damit dynamische Inhalte laden
