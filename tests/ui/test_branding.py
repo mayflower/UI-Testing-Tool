@@ -28,7 +28,7 @@ def _rgb_to_hex(rgb_str: str) -> str | None:
 
 
 class TestBranding:
-    """Prüft Europa-Park Branding-Konformität."""
+    """Prüft Corporate-Branding-Konformität."""
 
     def test_primary_color(self, page, selectors, brand):
         """Primärfarbe entspricht Branding-Vorgabe."""

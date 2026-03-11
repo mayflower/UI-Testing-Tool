@@ -1,7 +1,7 @@
 [project]
-name = "ep-testing-tool"
+name = "uiux-testing-tool"
 version = "0.1.0"
-description = "UI/UX Testing-Tool für den Europa-Park KI-Chatbot"
+description = "Automatisiertes UI/UX/A11y Testing-Tool fuer Chatbots"
 requires-python = ">=3.9"
 dependencies = [
     "playwright>=1.40",
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ep-test = "run:main"
+uiux-test = "run:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

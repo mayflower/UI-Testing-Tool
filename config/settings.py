@@ -1,4 +1,4 @@
-"""Zentrale Konfiguration für das EP-Testing-Tool."""
+"""Zentrale Konfiguration fuer das UI/UX-Testing-Tool."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ NAVIGATION_TIMEOUT = int(os.getenv("NAVIGATION_TIMEOUT", "30000"))
 RESPONSE_TIMEOUT = int(os.getenv("RESPONSE_TIMEOUT", "30000"))
 
 # Report
-TESTER_NAME = os.getenv("TESTER_NAME", "PO Team")
+TESTER_NAME = os.getenv("TESTER_NAME", "Tester")
 
 
 def _load_yaml(filename: str) -> dict:

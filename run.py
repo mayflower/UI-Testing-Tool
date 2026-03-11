@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-EP-Testing-Tool: CLI-Einstiegspunkt.
+UI/UX-Testing-Tool: CLI-Einstiegspunkt.
 
 
 Nutzung:
@@ -139,7 +139,7 @@ def generate_report(results: list[dict], env_name: str | None, suite: str | None
 
 def main():
     parser = argparse.ArgumentParser(
-        description="EP-Testing-Tool: UI/UX Tests für den Europa-Park Chatbot",
+        description="UI/UX-Testing-Tool: Automatisierte UI/UX/A11y Tests fuer Chatbots",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Beispiele:
@@ -218,7 +218,7 @@ Beispiele:
     SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("  EP-Testing-Tool: Europa-Park Chatbot UI/UX Tests")
+    print("  UI/UX-Testing-Tool")
     print("=" * 60)
 
     if args.list_envs:

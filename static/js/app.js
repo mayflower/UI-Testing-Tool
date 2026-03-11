@@ -1,5 +1,5 @@
 /**
- * EP-Testing-Tool: Frontend-Logik
+ * UI/UX-Testing-Tool: Frontend-Logik
  */
 
 let currentRunId = null;

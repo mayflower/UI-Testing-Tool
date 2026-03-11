@@ -28,8 +28,8 @@ class TestConversation:
         # Einfache Heuristik: Deutsche Wörter in der Begrüßung
         german_indicators = [
             "willkommen", "hallo", "guten", "herzlich",
-            "kann ich", "helfe", "fragen", "europa-park",
-            "europapark", "erlebnis",
+            "kann ich", "helfe", "fragen", "erlebnis",
+            "danke", "bitte", "gerne",
         ]
         welcome_lower = welcome.lower()
         has_german = any(word in welcome_lower for word in german_indicators)

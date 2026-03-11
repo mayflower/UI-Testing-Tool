@@ -1,4 +1,4 @@
-"""Pytest-Konfiguration und Browser-Fixtures für das EP-Testing-Tool."""
+"""Pytest-Konfiguration und Browser-Fixtures fuer das UI/UX-Testing-Tool."""
 
 import time
 

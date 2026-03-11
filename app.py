@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""EP-Testing-Tool: Web-Frontend für UI/UX Tests."""
+"""UI/UX-Testing-Tool: Web-Frontend."""
 
 from __future__ import annotations
 
@@ -556,7 +556,7 @@ def api_run_discovery():
 def main():
     """Starte den Web-Server."""
     print("=" * 60)
-    print("  EP-Testing-Tool: Web-Frontend")
+    print("  UI/UX-Testing-Tool: Web-Frontend")
     print("  http://localhost:5000")
     print("=" * 60)
     app.run(debug=True, port=5000)

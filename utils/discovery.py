@@ -80,7 +80,7 @@ DISCOVERY_PATTERNS = {
         # CopilotKit
         "div.copilotKitAssistantMessage",
         "[data-message-role='assistant']",
-        # ecki.ai / mAIstack custom patterns
+        # mAIstack / CopilotKit custom patterns
         "[class*='assistant-message-content']",
         "[class*='assistant-message']:not([class*='feedback'])",
         # Generic (exclude feedback/control elements)

@@ -1,9 +1,9 @@
-# EP-Testing-Tool: Europa-Park Branding-Konfiguration
+# UI/UX-Testing-Tool: Branding-Konfiguration
 # Trage hier die Corporate-Identity-Werte ein, sobald sie bekannt sind.
 # Alle Werte sind optional – Tests werden übersprungen wenn der Wert null ist.
 
 brand:
-  name: "Europa-Park"
+  name: null
 
   colors:
     primary: null        # z.B. "#244369"
@@ -17,4 +17,4 @@ brand:
     secondary: null
 
   logo:
-    expected_alt_text: "Europa-Park"
+    expected_alt_text: null

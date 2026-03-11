@@ -55,7 +55,7 @@ TEST_DESCRIPTIONS = {
     },
     "primary_color": {
         "label": "Primaerfarbe korrekt",
-        "description": "Die Hintergrundfarbe entspricht der Europa-Park CI",
+        "description": "Die Hintergrundfarbe entspricht dem Corporate Design",
         "action": "Hintergrundfarbe im CSS an die Markenfarbe anpassen (siehe brand.yaml)",
     },
     "accent_color_on_send_button": {
@@ -70,7 +70,7 @@ TEST_DESCRIPTIONS = {
     },
     "primary_font": {
         "label": "Schriftart korrekt",
-        "description": "Die verwendete Schriftart entspricht der Europa-Park CI",
+        "description": "Die verwendete Schriftart entspricht dem Corporate Design",
         "action": "font-family im CSS pruefen und die richtige Schriftart einbinden",
     },
     "font_size_readable": {
