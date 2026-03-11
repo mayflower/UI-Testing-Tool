@@ -13,8 +13,8 @@
     "orientationAngle": 0,
     "orientationType": "landscape-primary"
   },
-  "timestamp": "2026-03-11T12:41:39.500Z",
-  "url": "https://dev-3.ecki.ai/login",
+  "timestamp": "2026-03-11T12:56:22.836Z",
+  "url": "https://dev-3.ecki.ai/",
   "toolOptions": {
     "resultTypes": [
       "violations"
@@ -395,25 +395,6 @@
       "nodes": []
     },
     {
-      "id": "form-field-multiple-labels",
-      "impact": null,
-      "tags": [
-        "cat.forms",
-        "wcag2a",
-        "wcag332",
-        "TTv5",
-        "TT5.c",
-        "EN-301-549",
-        "EN-9.3.3.2",
-        "RGAAv4",
-        "RGAA-11.2.1"
-      ],
-      "description": "Ensure form field does not have multiple label elements",
-      "help": "Form field must not have multiple label elements",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/form-field-multiple-labels?application=axeAPI",
-      "nodes": []
-    },
-    {
       "id": "frame-focusable-content",
       "impact": null,
       "tags": [
@@ -504,41 +485,6 @@
       "nodes": []
     },
     {
-      "id": "image-alt",
-      "impact": null,
-      "tags": [
-        "cat.text-alternatives",
-        "wcag2a",
-        "wcag111",
-        "section508",
-        "section508.22.a",
-        "TTv5",
-        "TT7.a",
-        "TT7.b",
-        "EN-301-549",
-        "EN-9.1.1.1",
-        "ACT",
-        "RGAAv4",
-        "RGAA-1.1.1"
-      ],
-      "description": "Ensure <img> elements have alternative text or a role of none or presentation",
-      "help": "Images must have alternative text",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/image-alt?application=axeAPI",
-      "nodes": []
-    },
-    {
-      "id": "image-redundant-alt",
-      "impact": null,
-      "tags": [
-        "cat.text-alternatives",
-        "best-practice"
-      ],
-      "description": "Ensure image alternative is not repeated as text",
-      "help": "Alternative text of images should not be repeated as text",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/image-redundant-alt?application=axeAPI",
-      "nodes": []
-    },
-    {
       "id": "input-button-name",
       "impact": null,
       "tags": [
@@ -585,40 +531,6 @@
       "nodes": []
     },
     {
-      "id": "label-title-only",
-      "impact": null,
-      "tags": [
-        "cat.forms",
-        "best-practice"
-      ],
-      "description": "Ensure that every form element has a visible label and is not solely labeled using hidden labels, or the title or aria-describedby attributes",
-      "help": "Form elements should have a visible label",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/label-title-only?application=axeAPI",
-      "nodes": []
-    },
-    {
-      "id": "label",
-      "impact": null,
-      "tags": [
-        "cat.forms",
-        "wcag2a",
-        "wcag412",
-        "section508",
-        "section508.22.n",
-        "TTv5",
-        "TT5.c",
-        "EN-301-549",
-        "EN-9.4.1.2",
-        "ACT",
-        "RGAAv4",
-        "RGAA-11.1.1"
-      ],
-      "description": "Ensure every form element has a label",
-      "help": "Form elements must have labels",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/label?application=axeAPI",
-      "nodes": []
-    },
-    {
       "id": "landmark-banner-is-top-level",
       "impact": null,
       "tags": [
@@ -631,18 +543,6 @@
       "nodes": []
     },
     {
-      "id": "landmark-complementary-is-top-level",
-      "impact": null,
-      "tags": [
-        "cat.semantics",
-        "best-practice"
-      ],
-      "description": "Ensure the complementary landmark or aside is at top level",
-      "help": "Aside should not be contained in another landmark",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-complementary-is-top-level?application=axeAPI",
-      "nodes": []
-    },
-    {
       "id": "landmark-contentinfo-is-top-level",
       "impact": null,
       "tags": [
@@ -652,18 +552,6 @@
       "description": "Ensure the contentinfo landmark is at top level",
       "help": "Contentinfo landmark should not be contained in another landmark",
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-contentinfo-is-top-level?application=axeAPI",
-      "nodes": []
-    },
-    {
-      "id": "landmark-main-is-top-level",
-      "impact": null,
-      "tags": [
-        "cat.semantics",
-        "best-practice"
-      ],
-      "description": "Ensure the main landmark is at top level",
-      "help": "Main landmark should not be contained in another landmark",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-main-is-top-level?application=axeAPI",
       "nodes": []
     },
     {
@@ -688,30 +576,6 @@
       "description": "Ensure the document has at most one contentinfo landmark",
       "help": "Document should not have more than one contentinfo landmark",
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-no-duplicate-contentinfo?application=axeAPI",
-      "nodes": []
-    },
-    {
-      "id": "landmark-no-duplicate-main",
-      "impact": null,
-      "tags": [
-        "cat.semantics",
-        "best-practice"
-      ],
-      "description": "Ensure the document has at most one main landmark",
-      "help": "Document should not have more than one main landmark",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-no-duplicate-main?application=axeAPI",
-      "nodes": []
-    },
-    {
-      "id": "landmark-unique",
-      "impact": null,
-      "tags": [
-        "cat.semantics",
-        "best-practice"
-      ],
-      "description": "Ensure landmarks are unique",
-      "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-unique?application=axeAPI",
       "nodes": []
     },
     {
@@ -1616,7 +1480,7 @@
     },
     {
       "id": "button-name",
-      "impact": null,
+      "impact": "critical",
       "tags": [
         "cat.name-role-value",
         "wcag2a",
@@ -1638,26 +1502,26 @@
         {
           "any": [
             {
-              "id": "button-has-visible-text",
+              "id": "non-empty-title",
               "data": null,
               "relatedNodes": [],
               "impact": "critical",
-              "message": "Element has inner text that is visible to screen readers"
+              "message": "Element has a title attribute"
             }
           ],
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<button class=\"group relative w-ful...\">",
+          "html": "<button class=\"p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded transition-colors\" title=\"Seitenleiste einklappen\">",
           "target": [
-            ".group"
+            ".p-1"
           ]
         }
       ]
     },
     {
       "id": "color-contrast",
-      "impact": null,
+      "impact": "serious",
       "tags": [
         "cat.color",
         "wcag2aa",
@@ -1679,26 +1543,26 @@
             {
               "id": "color-contrast",
               "data": {
-                "fgColor": "#f3f4f6",
+                "fgColor": "#d1d5db",
                 "bgColor": "#111827",
-                "contrastRatio": 16.11,
-                "fontSize": "27.0pt (36px)",
-                "fontWeight": "bold",
+                "contrastRatio": 12.03,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
                 "messageKey": null,
-                "expectedContrastRatio": "3:1",
+                "expectedContrastRatio": "4.5:1",
                 "shadowColor": null
               },
               "relatedNodes": [],
               "impact": "serious",
-              "message": "Element has sufficient color contrast of 16.11"
+              "message": "Element has sufficient color contrast of 12.03"
             }
           ],
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<h1 class=\"text-center text-4xl font-bold text-gray-900 dark:text-gray-100\">Ecki</h1>",
+          "html": "<span>Neuer Chat</span>",
           "target": [
-            "h1"
+            ".hover\\:text-gray-900.dark\\:hover\\:text-gray-100.hover\\:bg-gray-200:nth-child(1) > span"
           ]
         }
       ]
@@ -1766,9 +1630,47 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<h1 class=\"text-center text-4xl font-bold text-gray-900 dark:text-gray-100\">Ecki</h1>",
+          "html": "<h1 class=\"text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2\">Wie kann ich Ihnen heute helfen?</h1>",
           "target": [
             "h1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "form-field-multiple-labels",
+      "impact": null,
+      "tags": [
+        "cat.forms",
+        "wcag2a",
+        "wcag332",
+        "TTv5",
+        "TT5.c",
+        "EN-301-549",
+        "EN-9.3.3.2",
+        "RGAAv4",
+        "RGAA-11.2.1"
+      ],
+      "description": "Ensure form field does not have multiple label elements",
+      "help": "Form field must not have multiple label elements",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/form-field-multiple-labels?application=axeAPI",
+      "nodes": [
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "multiple-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "moderate",
+              "message": "Form field does not have multiple label elements"
+            }
+          ],
+          "impact": null,
+          "html": "<textarea placeholder=\"Nachricht eingeben...\" rows=\"1\" style=\"overflow: auto; resize: none; max-height: 144px; height: 24px;\"></textarea>",
+          "target": [
+            "textarea"
           ]
         }
       ]
@@ -1792,15 +1694,9 @@
                 "headingOrder": [
                   {
                     "ancestry": [
-                      "html > body > div:nth-child(3) > div > div:nth-child(1) > h1"
+                      "html > body > div:nth-child(12) > main:nth-child(2) > div > div > div > h1:nth-child(2)"
                     ],
                     "level": 1
-                  },
-                  {
-                    "ancestry": [
-                      "html > body > div:nth-child(3) > div > div:nth-child(2) > div:nth-child(1) > h2:nth-child(1)"
-                    ],
-                    "level": 2
                   }
                 ]
               },
@@ -1812,7 +1708,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<h1 class=\"text-center text-4xl font-bold text-gray-900 dark:text-gray-100\">Ecki</h1>",
+          "html": "<h1 class=\"text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2\">Wie kann ich Ihnen heute helfen?</h1>",
           "target": [
             "h1"
           ]
@@ -1893,6 +1789,336 @@
           "html": "<html lang=\"de\" class=\"cabin_c8177778-module__oIIiNq__variable sourcesanspro_a95b8f38-module__QAGfbq__variable dark\" style=\"color-scheme: dark;\">",
           "target": [
             "html"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "image-alt",
+      "impact": null,
+      "tags": [
+        "cat.text-alternatives",
+        "wcag2a",
+        "wcag111",
+        "section508",
+        "section508.22.a",
+        "TTv5",
+        "TT7.a",
+        "TT7.b",
+        "EN-301-549",
+        "EN-9.1.1.1",
+        "ACT",
+        "RGAAv4",
+        "RGAA-1.1.1"
+      ],
+      "description": "Ensure <img> elements have alternative text or a role of none or presentation",
+      "help": "Images must have alternative text",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/image-alt?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "has-alt",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has an alt attribute"
+            }
+          ],
+          "all": [],
+          "none": [
+            {
+              "id": "alt-space-value",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has a valid alt attribute value"
+            }
+          ],
+          "impact": null,
+          "html": "<img alt=\"Ecki\" width=\"512\" height=\"559\" decoding=\"async\" data-nimg=\"1\" class=\"h-14 w-auto object-contain\" src=\"/images/logo-dark.svg\" style=\"color: transparent;\">",
+          "target": [
+            ".h-14"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "image-redundant-alt",
+      "impact": null,
+      "tags": [
+        "cat.text-alternatives",
+        "best-practice"
+      ],
+      "description": "Ensure image alternative is not repeated as text",
+      "help": "Alternative text of images should not be repeated as text",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/image-redundant-alt?application=axeAPI",
+      "nodes": [
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "duplicate-img-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "minor",
+              "message": "Element does not duplicate existing text in <img> alt text"
+            }
+          ],
+          "impact": null,
+          "html": "<img alt=\"Ecki\" width=\"512\" height=\"559\" decoding=\"async\" data-nimg=\"1\" class=\"h-14 w-auto object-contain\" src=\"/images/logo-dark.svg\" style=\"color: transparent;\">",
+          "target": [
+            ".h-14"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "label-title-only",
+      "impact": null,
+      "tags": [
+        "cat.forms",
+        "best-practice"
+      ],
+      "description": "Ensure that every form element has a visible label and is not solely labeled using hidden labels, or the title or aria-describedby attributes",
+      "help": "Form elements should have a visible label",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/label-title-only?application=axeAPI",
+      "nodes": [
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "title-only",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Form element does not solely use title attribute for its label"
+            }
+          ],
+          "impact": null,
+          "html": "<textarea placeholder=\"Nachricht eingeben...\" rows=\"1\" style=\"overflow: auto; resize: none; max-height: 144px; height: 24px;\"></textarea>",
+          "target": [
+            "textarea"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "label",
+      "impact": null,
+      "tags": [
+        "cat.forms",
+        "wcag2a",
+        "wcag412",
+        "section508",
+        "section508.22.n",
+        "TTv5",
+        "TT5.c",
+        "EN-301-549",
+        "EN-9.4.1.2",
+        "ACT",
+        "RGAAv4",
+        "RGAA-11.1.1"
+      ],
+      "description": "Ensure every form element has a label",
+      "help": "Form elements must have labels",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/label?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "non-empty-placeholder",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has a placeholder attribute"
+            }
+          ],
+          "all": [],
+          "none": [
+            {
+              "id": "hidden-explicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Form element has a visible explicit <label>"
+            }
+          ],
+          "impact": null,
+          "html": "<textarea placeholder=\"Nachricht eingeben...\" rows=\"1\" style=\"overflow: auto; resize: none; max-height: 144px; height: 24px;\"></textarea>",
+          "target": [
+            "textarea"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "landmark-complementary-is-top-level",
+      "impact": null,
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "description": "Ensure the complementary landmark or aside is at top level",
+      "help": "Aside should not be contained in another landmark",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-complementary-is-top-level?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "landmark-is-top-level",
+              "data": {
+                "role": "complementary"
+              },
+              "relatedNodes": [],
+              "impact": "moderate",
+              "message": "The complementary landmark is at the top level."
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<aside class=\"\n                flex flex-col h-full\n                bg-gray-100 dark:bg-gray-900\n                border-r border-gray-200 dark:border-gray-800\n                transition-all duration-200 ease-in-out\n            \" style=\"width: 260px;\">",
+          "target": [
+            "aside"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "landmark-main-is-top-level",
+      "impact": null,
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "description": "Ensure the main landmark is at top level",
+      "help": "Main landmark should not be contained in another landmark",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-main-is-top-level?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "landmark-is-top-level",
+              "data": {
+                "role": "main"
+              },
+              "relatedNodes": [],
+              "impact": "moderate",
+              "message": "The main landmark is at the top level."
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<main class=\"flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900\">",
+          "target": [
+            "main"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "landmark-no-duplicate-main",
+      "impact": null,
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "description": "Ensure the document has at most one main landmark",
+      "help": "Document should not have more than one main landmark",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-no-duplicate-main?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "page-no-duplicate-main",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "moderate",
+              "message": "Document does not have more than one main landmark"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<main class=\"flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900\">",
+          "target": [
+            "main"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "landmark-one-main",
+      "impact": null,
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "description": "Ensure the document has a main landmark",
+      "help": "Document should have one main landmark",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-one-main?application=axeAPI",
+      "nodes": [
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "page-has-main",
+              "data": null,
+              "relatedNodes": [
+                {
+                  "html": "<main class=\"flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "Document has at least one main landmark"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<html lang=\"de\" class=\"cabin_c8177778-module__oIIiNq__variable sourcesanspro_a95b8f38-module__QAGfbq__variable dark\" style=\"color-scheme: dark;\">",
+          "target": [
+            "html"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "landmark-unique",
+      "impact": null,
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "description": "Ensure landmarks are unique",
+      "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-unique?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "landmark-is-unique",
+              "data": {
+                "role": "complementary",
+                "accessibleText": null
+              },
+              "relatedNodes": [],
+              "impact": "moderate",
+              "message": "Landmarks must have a unique role or role/label/title (i.e. accessible name) combination"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<aside class=\"\n                flex flex-col h-full\n                bg-gray-100 dark:bg-gray-900\n                border-r border-gray-200 dark:border-gray-800\n                transition-all duration-200 ease-in-out\n            \" style=\"width: 260px;\">",
+          "target": [
+            "aside"
           ]
         }
       ]
@@ -1996,9 +2222,9 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<button class=\"group relative w-ful...\">",
+          "html": "<img alt=\"Ecki\" width=\"512\" height=\"559\" decoding=\"async\" data-nimg=\"1\" class=\"h-14 w-auto object-contain\" src=\"/images/logo-dark.svg\" style=\"color: transparent;\">",
           "target": [
-            ".group"
+            ".h-14"
           ]
         }
       ]
@@ -2022,7 +2248,7 @@
               "data": null,
               "relatedNodes": [
                 {
-                  "html": "<h1 class=\"text-center text-4xl font-bold text-gray-900 dark:text-gray-100\">Ecki</h1>",
+                  "html": "<h1 class=\"text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2\">Wie kann ich Ihnen heute helfen?</h1>",
                   "target": [
                     "h1"
                   ]
@@ -2043,7 +2269,7 @@
     },
     {
       "id": "region",
-      "impact": "moderate",
+      "impact": null,
       "tags": [
         "cat.keyboard",
         "best-practice",
@@ -2069,123 +2295,247 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<div class=\"flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 lg:px-8\">",
+          "html": "<next-route-announcer style=\"position: absolute;\"></next-route-announcer>",
           "target": [
-            ".min-h-screen"
+            "next-route-announcer"
           ]
         }
       ]
     }
   ],
-  "incomplete": [],
-  "violations": [
+  "incomplete": [
     {
-      "id": "landmark-one-main",
-      "impact": "moderate",
+      "id": "color-contrast",
+      "impact": "serious",
       "tags": [
-        "cat.semantics",
-        "best-practice"
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
       ],
-      "description": "Ensure the document has a main landmark",
-      "help": "Document should have one main landmark",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/landmark-one-main?application=axeAPI",
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axeAPI",
       "nodes": [
         {
-          "any": [],
-          "all": [
+          "any": [
             {
-              "id": "page-has-main",
-              "data": null,
-              "relatedNodes": [],
-              "impact": "moderate",
-              "message": "Document does not have a main landmark"
+              "id": "color-contrast",
+              "data": {
+                "fgColor": null,
+                "bgColor": null,
+                "contrastRatio": 0,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": "shortTextContent",
+                "expectedContrastRatio": "4.5:1",
+                "shadowColor": null
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-medium\">E</div>",
+                  "target": [
+                    ".w-8"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element content is too short to determine if it is actual text content"
             }
           ],
+          "all": [],
           "none": [],
-          "impact": "moderate",
-          "html": "<html lang=\"de\" class=\"cabin_c8177778-module__oIIiNq__variable sourcesanspro_a95b8f38-module__QAGfbq__variable dark\" style=\"color-scheme: dark;\">",
+          "impact": "serious",
+          "html": "<div class=\"w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-medium\">E</div>",
           "target": [
-            "html"
+            ".w-8"
           ],
-          "failureSummary": "Fix all of the following:\n  Document does not have a main landmark"
+          "failureSummary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+        }
+      ]
+    }
+  ],
+  "violations": [
+    {
+      "id": "button-name",
+      "impact": "critical",
+      "tags": [
+        "cat.name-role-value",
+        "wcag2a",
+        "wcag412",
+        "section508",
+        "section508.22.a",
+        "TTv5",
+        "TT6.a",
+        "EN-301-549",
+        "EN-9.4.1.2",
+        "ACT",
+        "RGAAv4",
+        "RGAA-11.9.1"
+      ],
+      "description": "Ensure buttons have discernible text",
+      "help": "Buttons must have discernible text",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/button-name?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element does not have inner text that is visible to screen readers"
+            },
+            {
+              "id": "aria-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-label attribute does not exist or is empty"
+            },
+            {
+              "id": "aria-labelledby",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty"
+            },
+            {
+              "id": "non-empty-title",
+              "data": {
+                "messageKey": "noAttr"
+              },
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has no title attribute"
+            },
+            {
+              "id": "implicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element does not have an implicit (wrapped) <label>"
+            },
+            {
+              "id": "explicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element does not have an explicit <label>"
+            },
+            {
+              "id": "presentational-role",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "critical",
+          "html": "<button disabled=\"\" data-copilotkit-in-progress=\"false\" data-test-id=\"copilot-chat-ready\" class=\"copilotKitInputControlButton\">",
+          "target": [
+            ".copilotKitInputControlButton"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
         }
       ]
     },
     {
-      "id": "region",
-      "impact": "moderate",
+      "id": "color-contrast",
+      "impact": "serious",
       "tags": [
-        "cat.keyboard",
-        "best-practice",
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
         "RGAAv4",
-        "RGAA-9.2.1"
+        "RGAA-3.2.1"
       ],
-      "description": "Ensure all page content is contained by landmarks",
-      "help": "All page content should be contained by landmarks",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/region?application=axeAPI",
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axeAPI",
       "nodes": [
         {
           "any": [
             {
-              "id": "region",
+              "id": "color-contrast",
               "data": {
-                "isIframe": false
+                "fgColor": "#6b7280",
+                "bgColor": "#111827",
+                "contrastRatio": 3.66,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1",
+                "shadowColor": null
               },
-              "relatedNodes": [],
-              "impact": "moderate",
-              "message": "Some page content is not contained by landmarks"
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"\n                flex flex-col h-full\n                bg-gray-100 dark:bg-gray-900\n                border-r border-gray-200 dark:border-gray-800\n                transition-all duration-200 ease-in-out\n            \" style=\"width: 260px;\">",
+                  "target": [
+                    "aside"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.66 (foreground color: #6b7280, background color: #111827, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
             }
           ],
           "all": [],
           "none": [],
-          "impact": "moderate",
-          "html": "<div><h1 class=\"text-center text-4xl font-bold text-gray-900 dark:text-gray-100\">Ecki</h1></div>",
+          "impact": "serious",
+          "html": "<span class=\"text-xs font-medium text-gray-500 uppercase tracking-wider\">Kürzlich</span>",
           "target": [
-            ".max-w-md > div:nth-child(1)"
+            ".uppercase"
           ],
-          "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.66 (foreground color: #6b7280, background color: #111827, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
         },
         {
           "any": [
             {
-              "id": "region",
+              "id": "color-contrast",
               "data": {
-                "isIframe": false
+                "fgColor": "#6b7280",
+                "bgColor": "#111827",
+                "contrastRatio": 3.66,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1",
+                "shadowColor": null
               },
-              "relatedNodes": [],
-              "impact": "moderate",
-              "message": "Some page content is not contained by landmarks"
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"\n                flex flex-col h-full\n                bg-gray-100 dark:bg-gray-900\n                border-r border-gray-200 dark:border-gray-800\n                transition-all duration-200 ease-in-out\n            \" style=\"width: 260px;\">",
+                  "target": [
+                    "aside"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.66 (foreground color: #6b7280, background color: #111827, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
             }
           ],
           "all": [],
           "none": [],
-          "impact": "moderate",
-          "html": "<div><h2 class=\"text-center text-2xl font-semibold text-gray-900 dark:text-gray-100\">In Ihr Konto einloggen</h2><p class=\"mt-2 text-center text-sm text-gray-600 dark:text-gray-400\">Verwenden Sie Ihr Microsoft-Organisationskonto, um fortzufahren</p></div>",
+          "impact": "serious",
+          "html": "<div class=\"mt-4 ml-2 text-xs text-gray-400 dark:text-gray-500\">sprint4-4</div>",
           "target": [
-            ".mt-8 > div:nth-child(1)"
+            ".mt-4"
           ],
-          "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
-        },
-        {
-          "any": [
-            {
-              "id": "region",
-              "data": {
-                "isIframe": false
-              },
-              "relatedNodes": [],
-              "impact": "moderate",
-              "message": "Some page content is not contained by landmarks"
-            }
-          ],
-          "all": [],
-          "none": [],
-          "impact": "moderate",
-          "html": "<div class=\"text-center\"><p class=\"text-xs text-gray-500 dark:text-gray-400\">Nur Benutzer mit autorisierten E-Mail-Domains können sich anmelden</p></div>",
-          "target": [
-            ".space-y-4 > .text-center"
-          ],
-          "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.66 (foreground color: #6b7280, background color: #111827, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
         }
       ]
     }
