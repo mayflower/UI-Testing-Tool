@@ -146,6 +146,19 @@ def serve_screenshot(name):
     return send_from_directory(str(SCREENSHOTS_DIR), name)
 
 
+@app.route("/live-browser")
+def live_browser():
+    """Aktueller Live-Screenshot des Playwright-Browsers (fuer MFA-Anzeige)."""
+    from flask import send_file
+    live_path = SCREENSHOTS_DIR / "_live.png"
+    if not live_path.exists():
+        return "", 204
+    response = send_file(str(live_path), mimetype="image/png")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
 def _run_tests_worker(
     run_id: str,
     env_name: str,

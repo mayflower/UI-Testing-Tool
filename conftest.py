@@ -126,9 +126,12 @@ def browser_context(environment):
                 if has_login_form(setup_page, wait_seconds=10):
                     perform_login_on_page(setup_page, username, password)
                     setup_page.wait_for_load_state("networkidle")
-                # Session speichern
-                AUTH_DIR.mkdir(parents=True, exist_ok=True)
-                context.storage_state(path=state_path)
+                # Nur speichern wenn wirklich eingeloggt (kein Login-Formular mehr)
+                if not has_login_form(setup_page, wait_seconds=3):
+                    AUTH_DIR.mkdir(parents=True, exist_ok=True)
+                    context.storage_state(path=state_path)
+                else:
+                    raise ValueError("Login scheinbar fehlgeschlagen – Login-Formular noch sichtbar.")
             except Exception as e:
                 setup_page.close()
                 context.close()

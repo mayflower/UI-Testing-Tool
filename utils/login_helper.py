@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from playwright.sync_api import Page
 
+from config.settings import SCREENSHOTS_DIR
+
+_LIVE_SCREENSHOT_PATH = str(SCREENSHOTS_DIR / "_live.png")
+
 
 # Generische Login-Formular-Selektoren
 LOGIN_FORM_PATTERNS = {
@@ -40,6 +44,19 @@ _ENTRA_PASSWORD_INPUT = "input[name='passwd']"
 _ENTRA_SIGNIN_BUTTON = "input[id='idSIButton9']"
 _ENTRA_STAY_SIGNED_IN_NO = "#idBtn_Back"    # "Nein" bei "Angemeldet bleiben?"
 _ENTRA_ERROR = "#passwordError, #usernameError, [id$='Error'][role='alert'], .alert-error"
+
+# Auth.js / NextAuth Provider-Button (z.B. "Mit Microsoft anmelden")
+_AUTHJS_MICROSOFT_BUTTON = [
+    "button:has-text('Microsoft')",
+    "a:has-text('Microsoft')",
+    "button:has-text('Azure')",
+    "button:has-text('Entra')",
+    "[data-provider='azure-ad']",
+    "[data-provider='microsoft-entra-id']",
+    "form[action*='azure-ad'] button",
+    "form[action*='microsoft'] button",
+    "form[action*='entra'] button",
+]
 
 # Typische Fehlermeldungs-Patterns
 _ERROR_PATTERNS = [
@@ -93,16 +110,27 @@ def perform_login(
 ) -> bool:
     """Fuehre Login durch. Unterstuetzt Entra ID (OAuth) und generische Formulare.
 
-    Navigiert zur login_url. Falls bereits eingeloggt (kein Login-Formular),
-    wird der Login uebersprungen.
+    Navigiert zur login_url. Falls die App eine Auth.js Provider-Seite zeigt
+    (z.B. "Mit Microsoft anmelden" Button), wird dieser automatisch geklickt
+    bevor der Entra ID Flow startet.
     """
     page.goto(login_url, wait_until="networkidle", timeout=timeout)
-
-    # Kurz warten auf moegliche JS-Redirects (z.B. OAuth-Weiterleitung)
     page.wait_for_timeout(1500)
 
-    if not has_login_form(page, wait_seconds=10):
-        return True  # Bereits eingeloggt
+    # Bereits eingeloggt (kein Login-Formular, kein Provider-Button)?
+    if not has_login_form(page, wait_seconds=3) and not _find_login_element(page, _AUTHJS_MICROSOFT_BUTTON):
+        return True
+
+    # Auth.js Provider-Seite: "Mit Microsoft anmelden" Button klicken
+    if not _is_entra_page(page):
+        provider_btn = _find_login_element(page, _AUTHJS_MICROSOFT_BUTTON)
+        if provider_btn:
+            page.locator(provider_btn).click()
+            # Warten bis Redirect zu login.microsoftonline.com abgeschlossen
+            try:
+                page.wait_for_url("**/login.microsoftonline.com/**", timeout=10000)
+            except Exception:
+                page.wait_for_load_state("networkidle", timeout=timeout)
 
     if _is_entra_page(page):
         return _perform_entra_login(page, username, password, timeout)
@@ -128,11 +156,12 @@ def _perform_entra_login(
     password: str,
     timeout: int = 30000,
 ) -> bool:
-    """Microsoft Entra ID zweistufiger Login-Flow.
+    """Microsoft Entra ID Login-Flow mit MFA-Unterstuetzung.
 
     Schritt 1: E-Mail eingeben → Weiter
     Schritt 2: Passwort eingeben → Anmelden
-    Schritt 3: "Angemeldet bleiben?" → Nein
+    Schritt 3: MFA-Freigabe abwarten (falls aktiv)
+    Schritt 4: "Angemeldet bleiben?" → Nein
     """
     # --- Schritt 1: E-Mail ---
     try:
@@ -149,7 +178,6 @@ def _perform_entra_login(
     try:
         page.wait_for_selector(_ENTRA_PASSWORD_INPUT, state="visible", timeout=15000)
     except Exception:
-        # Pruefen ob Fehlermeldung sichtbar (z.B. Konto nicht gefunden)
         error = _detect_entra_error(page)
         raise ValueError(f"Entra ID Login: Passwort-Feld nicht erschienen. {error or ''}")
 
@@ -158,17 +186,20 @@ def _perform_entra_login(
     pass_loc.fill(password)
     page.locator(_ENTRA_SIGNIN_BUTTON).click()
 
-    # Warten bis Seite geladen ist
     page.wait_for_load_state("networkidle", timeout=timeout)
     page.wait_for_timeout(1000)
 
-    # Fehlerpruefung
+    # Fehlerpruefung vor MFA
     if _is_entra_page(page):
         error = _detect_entra_error(page)
         if error:
             raise ValueError(f"Entra ID Login fehlgeschlagen: {error}")
 
-    # --- Schritt 3: "Angemeldet bleiben?" dialog ---
+    # --- Schritt 3: MFA ---
+    if _is_entra_page(page):
+        _handle_entra_mfa(page)
+
+    # --- Schritt 4: "Angemeldet bleiben?" ---
     try:
         page.wait_for_selector(_ENTRA_STAY_SIGNED_IN_NO, state="visible", timeout=5000)
         page.locator(_ENTRA_STAY_SIGNED_IN_NO).click()
@@ -177,6 +208,60 @@ def _perform_entra_login(
         pass  # Dialog erscheint nicht immer
 
     return True
+
+
+def _handle_entra_mfa(page: Page, mfa_timeout: int = 120000) -> None:
+    """Wartet auf MFA-Freigabe, speichert Live-Screenshots und gibt Hinweise aus.
+
+    Unterstuetzt:
+    - Number Matching (Zahl im Browser → in Authenticator App bestaetigen)
+    - TOTP / SMS (Code-Eingabe im Browser)
+    - Push-Benachrichtigung (einfaches Warten)
+
+    Waehrend des Wartens wird alle 500ms ein Screenshot nach
+    SCREENSHOTS_DIR/_live.png gespeichert (fuer die Web-UI Live-Ansicht).
+    """
+    import time as _time
+
+    SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Number Matching: Zahl anzeigen die in der Authenticator App bestaetigt werden muss
+    number_el = page.query_selector("#idRichContext_DisplaySign")
+    if number_el and number_el.is_visible():
+        number = number_el.inner_text().strip()
+        print(f"\n{'='*50}")
+        print(f"  MFA ERFORDERLICH - Number Matching")
+        print(f"  Bitte die Zahl  >>{number}<<  in der")
+        print(f"  Microsoft Authenticator App bestaetigen.")
+        print(f"  (Live-Ansicht im Browser verfuegbar)")
+        print(f"{'='*50}\n")
+    elif page.query_selector("input[name='otc']"):
+        print(f"\n{'='*50}")
+        print(f"  MFA ERFORDERLICH - Einmal-Code")
+        print(f"  Bitte den Code im Browser eingeben.")
+        print(f"  (Live-Ansicht im Browser verfuegbar)")
+        print(f"{'='*50}\n")
+    else:
+        print(f"\n{'='*50}")
+        print(f"  MFA ERFORDERLICH")
+        print(f"  Bitte Anforderung in der Authenticator App bestaetigen.")
+        print(f"  (Live-Ansicht im Browser verfuegbar)")
+        print(f"{'='*50}\n")
+
+    # Polling-Loop: Screenshot alle 500ms + MFA-Abschluss pruefen
+    deadline = _time.time() + mfa_timeout / 1000
+    while _time.time() < deadline:
+        try:
+            page.screenshot(path=_LIVE_SCREENSHOT_PATH)
+        except Exception:
+            pass
+        if "login.microsoftonline.com" not in page.url:
+            return
+        page.wait_for_timeout(500)
+
+    raise ValueError(
+        f"MFA-Timeout: Keine Freigabe innerhalb von {mfa_timeout // 1000} Sekunden."
+    )
 
 
 def _detect_entra_error(page: Page) -> str | None:

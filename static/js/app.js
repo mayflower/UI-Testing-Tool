@@ -282,6 +282,7 @@ async function runTests() {
     });
 
     currentRunId = data.run_id;
+    startLiveBrowser();
     startEventStream(data.run_id);
 }
 
@@ -298,6 +299,37 @@ async function cancelTests() {
         // Ignorieren – Stream-Ende raeumt auf
     }
 }
+
+// ========== Live-Browser ==========
+
+let liveBrowserInterval = null;
+
+function startLiveBrowser() {
+    const section = document.getElementById("liveBrowserSection");
+    const img = document.getElementById("liveBrowserImg");
+    section.style.display = "";
+    liveBrowserInterval = setInterval(async () => {
+        const res = await fetch("/live-browser");
+        if (res.status === 204) return; // noch kein Screenshot
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const old = img.src;
+        img.src = url;
+        if (old.startsWith("blob:")) URL.revokeObjectURL(old);
+        document.getElementById("liveBrowserLabel").textContent =
+            "Zuletzt aktualisiert: " + new Date().toLocaleTimeString();
+    }, 500);
+}
+
+function stopLiveBrowser() {
+    if (liveBrowserInterval) {
+        clearInterval(liveBrowserInterval);
+        liveBrowserInterval = null;
+    }
+    document.getElementById("liveBrowserSection").style.display = "none";
+}
+
+// ========== Event Stream ==========
 
 function startEventStream(runId) {
     if (eventSource) {
@@ -435,6 +467,7 @@ function onTestsCompleted(data) {
     const pct = total > 0 ? Math.round(((data.passed || 0) / total) * 100) : 0;
     document.getElementById("lastRunStatus").textContent = `${pct}% bestanden`;
 
+    stopLiveBrowser();
     setTimeout(() => {
         loadReports();
         loadScreenshots();
