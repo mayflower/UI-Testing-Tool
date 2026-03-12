@@ -1,19 +1,11 @@
 environments:
-  Dev 1 Umgebung:
-    login_url: https://dev-1ecki.ai/login
-    password: osh3dah7eul3Kier
-    url: https://dev-1.ecki.ai/
-    username: staging@ecki.ai
-  Dev 2 Umgebung:
-    login_url: https://dev-2.ecki.ai/login
-    password: osh3dah7eul3Kier
-    url: https://dev-2.ecki.ai/
-    username: staging@ecki.ai
   Dev 3 Umgebung:
     login_url: https://dev-3.ecki.ai/login
     password: h5KilB94-wS#X74FsW
     url: https://dev-3.ecki.ai/
     username: ext.may.gregor@europaparkde.onmicrosoft.com
-  staging:
-    description: Staging/Test-Umgebung
-    url: https://stage.ecki.ai/
+  Dev2:
+    login_url: https://dev-2.ecki.ai/login
+    password: h5KilB94-wS#X74FsW
+    url: https://dev-2.ecki.ai/
+    username: ext.may.gregor@europaparkde.onmicrosoft.com
