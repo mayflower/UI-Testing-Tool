@@ -237,6 +237,12 @@ def _run_tests_worker(
         run["status"] = "completed"
         run["finished_at"] = datetime.now().isoformat()
 
+        # Fehlermeldungen aus pytest-Output extrahieren und den Ergebnissen zuordnen
+        error_messages = _extract_error_messages(output_lines)
+        for r in run.get("results", []):
+            if r["outcome"] in ("failed", "error") and not r.get("message"):
+                r["message"] = error_messages.get(r["name"], "")
+
         # Report generieren
         _generate_report_for_run(run, env_name, suite, url)
 
@@ -376,18 +382,13 @@ def _generate_report_for_run(run: dict, env_name: str, suite: str | None, url: s
         else:
             env = get_environment(env_name)
 
-        # Fehlermeldungen aus dem gesamten Output extrahieren
-        error_messages = _extract_error_messages(run.get("output", []))
-
-        # Ergebnisse fürs Report-Format aufbereiten
+        # Ergebnisse fürs Report-Format aufbereiten (message bereits in results vorhanden)
         report_results = []
         for r in results:
-            test_name = r["name"]
-            message = error_messages.get(test_name, "")
             report_results.append({
-                "name": test_name,
+                "name": r["name"],
                 "outcome": r["outcome"],
-                "message": message,
+                "message": r.get("message", ""),
                 "duration": 0,
                 "suite": r["suite"],
             })
