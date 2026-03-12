@@ -45,6 +45,12 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/status")
+def api_status():
+    """Health-Check-Endpoint fuer Kubernetes Probes."""
+    return jsonify({"status": "ok"})
+
+
 @app.route("/api/environments")
 def api_environments():
     """Alle konfigurierten Umgebungen."""
@@ -650,7 +656,8 @@ def main():
     print("  UI/UX-Testing-Tool: Web-Frontend")
     print("  http://localhost:5000")
     print("=" * 60)
-    app.run(debug=True, port=5000)
+    debug = os.environ.get("FLASK_ENV") != "production"
+    app.run(debug=debug, host="0.0.0.0", port=5000)
 
 
 if __name__ == "__main__":

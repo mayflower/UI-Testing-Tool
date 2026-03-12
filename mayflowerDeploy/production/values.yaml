@@ -1,0 +1,13 @@
+environment: production
+
+# ANPASSEN: Domain fuer den Cluster
+domain: ep-testing-tool.data.mayflower.tech
+
+images:
+  app:
+    # ANPASSEN: GitHub-Org/Repo-Name nach Push
+    image: ghcr.io/mayflower/ep-testing-tool/ep-testing-tool
+    tag: latest # managed by argocd-image-updater
+
+config:
+  FLASK_ENV: "production"

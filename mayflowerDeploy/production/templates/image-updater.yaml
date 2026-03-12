@@ -1,0 +1,19 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  namespace: argocd
+  applicationRefs:
+    - namePattern: {{ .Release.Name | quote }}
+      images:
+        {{- range $name, $img := .Values.images }}
+        - alias: {{ $name }}
+          imageName: "{{ $img.image }}:{{ $img.tag }}"
+          commonUpdateSettings:
+            updateStrategy: digest
+          manifestTargets:
+            helm:
+              name: "images.{{ $name }}.image"
+              tag: "images.{{ $name }}.tag"
+        {{- end }}
