@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository }}/ep-testing-tool
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/ui-testing-tool
 
 jobs:
   build:
@@ -45,5 +45,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=ep-testing-tool
-          cache-to: type=gha,scope=ep-testing-tool,mode=max
+          cache-from: type=gha,scope=ui-testing-tool
+          cache-to: type=gha,scope=ui-testing-tool,mode=max
