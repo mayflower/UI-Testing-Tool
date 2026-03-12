@@ -444,7 +444,7 @@ function updateSummary() {
     `;
 }
 
-function onTestsCompleted(data) {
+async function onTestsCompleted(data) {
     const btn = document.getElementById("btnRunTests");
     btn.disabled = false;
     btn.textContent = "Tests starten";

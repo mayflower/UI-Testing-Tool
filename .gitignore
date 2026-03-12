@@ -1,5 +1,6 @@
 .env
 .auth/
+config/jira.yaml
 __pycache__/
 *.pyc
 .pytest_cache/
