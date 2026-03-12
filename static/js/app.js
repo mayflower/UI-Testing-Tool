@@ -728,7 +728,6 @@ async function saveJiraConfig() {
 
     status.textContent = result.ok ? "Gespeichert." : `Fehler: ${result.error}`;
     status.style.color = result.ok ? "var(--success)" : "var(--danger)";
-    setTimeout(() => { status.textContent = ""; }, 3000);
 }
 
 async function testJiraConnection() {
