@@ -761,33 +761,77 @@ function openJiraExportModal() {
     const failedItems = document.querySelectorAll("#testList .test-item.failed");
     const count = failedItems.length;
 
-    summaryEl.textContent = count === 0
+    summaryEl.innerHTML = count === 0
         ? "Keine fehlgeschlagenen Tests gefunden."
-        : `${count} fehlgeschlagene Test${count === 1 ? "" : "s"} werden als Jira-Ticket${count === 1 ? "" : "s"} erstellt.`;
+        : `<label style="cursor:pointer;user-select:none;"><input type="checkbox" id="jiraSelectAll" checked onchange="toggleJiraSelectAll()" style="margin-right:0.4rem;">Alle ${count} auswaehlen</label>`;
 
-    listEl.innerHTML = Array.from(failedItems).map(item => {
+    listEl.innerHTML = Array.from(failedItems).map((item, i) => {
         const name = item.querySelector(".name")?.textContent || "";
         const suite = item.querySelector(".suite-tag")?.textContent || "";
-        return `<div style="padding:0.3rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+        return `<label style="display:flex;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;cursor:pointer;gap:0.4rem;">
+            <input type="checkbox" class="jira-test-cb" data-index="${i}" checked>
             <span style="color:var(--danger);">&#10007;</span>
-            <span style="margin-left:0.4rem;">${escapeHtml(name)}</span>
-            <span class="suite-tag ${suite.toLowerCase()}" style="float:right;">${escapeHtml(suite)}</span>
-        </div>`;
+            <span style="flex:1;">${escapeHtml(name)}</span>
+            <span class="suite-tag ${suite.toLowerCase()}">${escapeHtml(suite)}</span>
+        </label>`;
     }).join("") || '<p style="color:var(--text-muted);font-size:0.85rem;">Keine fehlgeschlagenen Tests.</p>';
 
+    updateJiraCreateBtn();
     statusEl.textContent = "";
-    document.getElementById("btnJiraCreate").disabled = count === 0;
     modal.style.display = "flex";
+
+    // Checkboxen ueberwachen
+    listEl.querySelectorAll(".jira-test-cb").forEach(cb => {
+        cb.addEventListener("change", updateJiraCreateBtn);
+    });
+}
+
+function toggleJiraSelectAll() {
+    const checked = document.getElementById("jiraSelectAll").checked;
+    document.querySelectorAll(".jira-test-cb").forEach(cb => { cb.checked = checked; });
+    updateJiraCreateBtn();
+}
+
+function updateJiraCreateBtn() {
+    const selected = document.querySelectorAll(".jira-test-cb:checked").length;
+    const total = document.querySelectorAll(".jira-test-cb").length;
+    const btn = document.getElementById("btnJiraCreate");
+    btn.disabled = selected === 0;
+    btn.textContent = selected === 0
+        ? "Tickets erstellen"
+        : `${selected} Ticket${selected === 1 ? "" : "s"} erstellen`;
+
+    // "Alle"-Checkbox synchron halten
+    const selectAll = document.getElementById("jiraSelectAll");
+    if (selectAll) selectAll.checked = selected === total;
+}
+
+function getSelectedFailedTestNames() {
+    const checkboxes = document.querySelectorAll(".jira-test-cb:checked");
+    const failedItems = document.querySelectorAll("#testList .test-item.failed");
+    const names = [];
+    checkboxes.forEach(cb => {
+        const idx = parseInt(cb.dataset.index, 10);
+        const item = failedItems[idx];
+        if (item) {
+            const nameEl = item.querySelector(".name");
+            if (nameEl) names.push(nameEl.textContent.trim());
+        }
+    });
+    return names;
 }
 
 async function createJiraTickets() {
     if (!currentRunId) return;
 
+    const selectedNames = getSelectedFailedTestNames();
+    if (selectedNames.length === 0) return;
+
     const statusEl = document.getElementById("jiraExportStatus");
     const btn = document.getElementById("btnJiraCreate");
     btn.disabled = true;
     statusEl.style.color = "var(--text-muted)";
-    statusEl.textContent = "Tickets werden erstellt...";
+    statusEl.textContent = `${selectedNames.length} Ticket${selectedNames.length === 1 ? " wird" : "s werden"} erstellt...`;
 
     const projectKey = document.getElementById("jiraProjectKey").value.trim().toUpperCase();
     const issueType = document.getElementById("jiraIssueType").value.trim() || "Bug";
@@ -800,6 +844,7 @@ async function createJiraTickets() {
             project_key: projectKey || null,
             issue_type: issueType,
             url: url,
+            selected_tests: selectedNames,
         }),
     });
 

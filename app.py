@@ -620,8 +620,16 @@ def api_jira_create_tickets():
         return jsonify({"ok": False, "error": "Testlauf nicht gefunden"}), 404
 
     results = run.get("results", [])
+    selected_tests = data.get("selected_tests")  # Liste von Display-Namen oder None
     if not environment_url:
         environment_url = run.get("url") or ""
+
+    # Falls nur bestimmte Tests ausgewaehlt: filtern
+    if selected_tests:
+        def _display_name(name: str) -> str:
+            return name.replace("test_", "").replace("_", " ").capitalize()
+        selected_set = set(selected_tests)
+        results = [r for r in results if _display_name(r.get("name", "")) in selected_set]
 
     try:
         created = create_tickets_for_failures(
