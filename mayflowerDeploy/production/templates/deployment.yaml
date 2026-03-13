@@ -36,6 +36,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-config
+            {{- if .Values.secrets }}
+            - secretRef:
+                name: {{ .Release.Name }}-secrets
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /api/status

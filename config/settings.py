@@ -133,9 +133,20 @@ def get_brand() -> dict:
 
 
 def get_jira_config() -> dict:
-    """Lade Jira-Konfiguration."""
+    """Lade Jira-Konfiguration. Fallback auf Umgebungsvariablen."""
     data = _load_yaml("jira.yaml")
-    return data.get("jira", {})
+    config = data.get("jira", {})
+    if not config:
+        config = {
+            k: v for k, v in {
+                "base_url": os.getenv("JIRA_BASE_URL"),
+                "api_token": os.getenv("JIRA_API_TOKEN"),
+                "project_key": os.getenv("JIRA_PROJECT_KEY"),
+                "issue_type": os.getenv("JIRA_ISSUE_TYPE", "Bug"),
+                "email": os.getenv("JIRA_EMAIL"),
+            }.items() if v
+        }
+    return config
 
 
 def save_jira_config(config: dict) -> None:
