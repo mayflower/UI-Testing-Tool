@@ -1,6 +1,6 @@
 environment: production
 
-domain: ui-testing-tool.data.mayflower.tech
+domain: ui-testing-tool.data.mayflower.zone
 
 images:
   app:
