@@ -3,27 +3,27 @@ kind: Deployment
 metadata:
   name: {{ .Release.Name }}
   labels:
-    {{- include "ep-testing-tool.labels" . | nindent 4 }}
-    app.kubernetes.io/name: ep-testing-tool
+    {{- include "ui-testing-tool.labels" . | nindent 4 }}
+    app.kubernetes.io/name: ui-testing-tool
     app.kubernetes.io/component: app
 spec:
   replicas: 1
   revisionHistoryLimit: 0
   selector:
     matchLabels:
-      app.kubernetes.io/name: ep-testing-tool
+      app.kubernetes.io/name: ui-testing-tool
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        {{- include "ep-testing-tool.labels" . | nindent 8 }}
-        app.kubernetes.io/name: ep-testing-tool
+        {{- include "ui-testing-tool.labels" . | nindent 8 }}
+        app.kubernetes.io/name: ui-testing-tool
         app.kubernetes.io/component: app
     spec:
       imagePullSecrets:
         - name: github-registry
       containers:
-        - name: ep-testing-tool
+        - name: ui-testing-tool
           image: "{{ .Values.images.app.image }}:{{ .Values.images.app.tag }}"
           imagePullPolicy: IfNotPresent
           ports:

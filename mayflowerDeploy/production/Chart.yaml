@@ -1,5 +1,5 @@
 apiVersion: v2
-name: ep-testing-tool
+name: ui-testing-tool
 description: UI/UX-Testing-Tool fuer automatisierte Chatbot-Tests
 type: application
 version: 0.1.0

@@ -3,11 +3,11 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}
   labels:
-    {{- include "ep-testing-tool.labels" . | nindent 4 }}
+    {{- include "ui-testing-tool.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: ep-testing-tool
+    app.kubernetes.io/name: ui-testing-tool
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - port: 80

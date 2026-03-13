@@ -1,4 +1,4 @@
-# EP-Testing-Tool
+# UI-Testing-Tool
 
 UI/UX Testing-Tool für den Europa-Park KI-Chatbot (mAIstack).
 
