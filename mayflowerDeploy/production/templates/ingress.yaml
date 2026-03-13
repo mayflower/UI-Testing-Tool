@@ -6,7 +6,8 @@ metadata:
   labels:
     {{- include "ui-testing-tool.labels" . | nindent 4 }}
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ .Release.Name }}-https-redirect@kubernetescrd
     cert-manager.io/cluster-issuer: letsencrypt-intern-dns
 spec:
   tls:
