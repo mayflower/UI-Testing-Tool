@@ -13,8 +13,8 @@
     "orientationAngle": 0,
     "orientationType": "landscape-primary"
   },
-  "timestamp": "2026-03-13T07:53:27.499Z",
-  "url": "https://dev-3.ecki.ai/",
+  "timestamp": "2026-03-17T11:36:18.677Z",
+  "url": "https://stage.ecki.ai/",
   "toolOptions": {
     "resultTypes": [
       "violations"
@@ -757,6 +757,27 @@
       "description": "Ensure the scope attribute is used correctly on tables",
       "help": "scope attribute should be used correctly",
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/scope-attr-valid?application=axeAPI",
+      "nodes": []
+    },
+    {
+      "id": "scrollable-region-focusable",
+      "impact": null,
+      "tags": [
+        "cat.keyboard",
+        "wcag2a",
+        "wcag211",
+        "wcag213",
+        "TTv5",
+        "TT4.a",
+        "EN-301-549",
+        "EN-9.2.1.1",
+        "EN-9.2.1.3",
+        "RGAAv4",
+        "RGAA-7.3.2"
+      ],
+      "description": "Ensure elements that have scrollable content are accessible by keyboard",
+      "help": "Scrollable region must have keyboard access",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/scrollable-region-focusable?application=axeAPI",
       "nodes": []
     },
     {
@@ -2510,59 +2531,11 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<div class=\"mt-4 ml-2 text-xs text-gray-400 dark:text-gray-500\">sprint4-4</div>",
+          "html": "<div class=\"mt-4 ml-2 text-xs text-gray-400 dark:text-gray-500\">sprint5-2</div>",
           "target": [
             ".mt-4"
           ],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.66 (foreground color: #6b7280, background color: #111827, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
-        }
-      ]
-    },
-    {
-      "id": "scrollable-region-focusable",
-      "impact": "serious",
-      "tags": [
-        "cat.keyboard",
-        "wcag2a",
-        "wcag211",
-        "wcag213",
-        "TTv5",
-        "TT4.a",
-        "EN-301-549",
-        "EN-9.2.1.1",
-        "EN-9.2.1.3",
-        "RGAAv4",
-        "RGAA-7.3.2"
-      ],
-      "description": "Ensure elements that have scrollable content are accessible by keyboard",
-      "help": "Scrollable region must have keyboard access",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/scrollable-region-focusable?application=axeAPI",
-      "nodes": [
-        {
-          "any": [
-            {
-              "id": "focusable-content",
-              "data": null,
-              "relatedNodes": [],
-              "impact": "serious",
-              "message": "Element should have focusable content"
-            },
-            {
-              "id": "focusable-element",
-              "data": null,
-              "relatedNodes": [],
-              "impact": "serious",
-              "message": "Element should be focusable"
-            }
-          ],
-          "all": [],
-          "none": [],
-          "impact": "serious",
-          "html": "<div class=\"flex-1 overflow-y-auto\">",
-          "target": [
-            ".overflow-y-auto"
-          ],
-          "failureSummary": "Fix any of the following:\n  Element should have focusable content\n  Element should be focusable"
         }
       ]
     }
