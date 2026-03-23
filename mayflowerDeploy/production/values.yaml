@@ -4,7 +4,7 @@ domain: ui-testing-tool.data.mayflower.zone
 
 images:
   app:
-    image: ghcr.io/mayflower/ui-testing-tool/ui-testing-tool
+    image: ghcr.io/mayflower/ui-testing-tool
     tag: latest # managed by argocd-image-updater
 
 config:

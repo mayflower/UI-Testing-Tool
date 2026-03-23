@@ -16,7 +16,7 @@ jobs:
       contents: read
       packages: write
     env:
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/ui-testing-tool/ui-testing-tool
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/ui-testing-tool
     steps:
       - uses: actions/checkout@v4
 
