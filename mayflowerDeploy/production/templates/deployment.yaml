@@ -20,8 +20,6 @@ spec:
         app.kubernetes.io/name: ui-testing-tool
         app.kubernetes.io/component: app
     spec:
-      imagePullSecrets:
-        - name: github-registry
       containers:
         - name: ui-testing-tool
           image: "{{ .Values.images.app.image }}:{{ .Values.images.app.tag }}"
