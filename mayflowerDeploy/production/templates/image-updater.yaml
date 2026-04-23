@@ -5,7 +5,7 @@ metadata:
 spec:
   namespace: argocd
   applicationRefs:
-    - namePattern: {{ .Release.Name | quote }}
+    - namePattern: "ui-testing-tool-production"
       images:
         {{- range $name, $img := .Values.images }}
         - alias: {{ $name }}
