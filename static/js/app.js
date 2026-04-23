@@ -22,6 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") runTests();
     });
 
+    // Enter-Taste im Scan-URL-Feld startet Scan
+    document.getElementById("scanUrlInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") startWebsiteScan();
+    });
+
     // Formularfelder bei Aenderung in localStorage speichern
     const persistFields = ["urlInput", "loginUrlInput", "usernameInput", "passwordInput"];
     persistFields.forEach((id) => {
@@ -874,6 +879,301 @@ async function createJiraTickets() {
     document.getElementById("jiraExportList").innerHTML = html || "Keine Tickets erstellt.";
     statusEl.textContent = `${succeeded.length} Ticket${succeeded.length === 1 ? "" : "s"} erstellt${failed.length > 0 ? `, ${failed.length} fehlgeschlagen` : ""}.`;
     statusEl.style.color = failed.length > 0 ? "var(--warning)" : "var(--success)";
+}
+
+// ========== Mode-Switcher ==========
+
+function switchMode(mode) {
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === mode);
+    });
+    document.getElementById("mode-chatbot").style.display = mode === "chatbot" ? "block" : "none";
+    document.getElementById("mode-website").style.display = mode === "website" ? "block" : "none";
+    localStorage.setItem("ep_test_mode", mode);
+}
+
+// Restore mode on load
+(function() {
+    const saved = localStorage.getItem("ep_test_mode");
+    if (saved === "website") {
+        // defer to after DOM ready
+        document.addEventListener("DOMContentLoaded", () => switchMode("website"));
+    }
+})();
+
+// ========== Website-Scan ==========
+
+let scanRunId = null;
+let scanEventSource = null;
+
+async function startWebsiteScan() {
+    const url = document.getElementById("scanUrlInput").value.trim();
+    if (!url) {
+        alert("Bitte eine URL eingeben.");
+        return;
+    }
+
+    const checks = [];
+    document.querySelectorAll(".scan-checks input[type=checkbox]:checked").forEach(cb => {
+        checks.push(cb.value);
+    });
+    if (checks.length === 0) {
+        alert("Bitte mindestens eine Kategorie auswählen.");
+        return;
+    }
+
+    // UI reset
+    document.getElementById("scanResultsSection").style.display = "block";
+    document.getElementById("scanProgressBar").style.display = "block";
+    document.getElementById("scanProgressFill").className = "progress-fill indeterminate";
+    document.getElementById("scanResultsSummary").textContent = "";
+    document.getElementById("btnStartScan").style.display = "none";
+    document.getElementById("btnCancelScan").style.display = "inline-flex";
+
+    // Clear previous results
+    ["scanListAll", "scanListAccessibility", "scanListPerformance", "scanListLinks", "scanListResponsive", "scanListSeo"].forEach(id => {
+        document.getElementById(id).innerHTML = "";
+    });
+    document.getElementById("scanScreenshotGrid").innerHTML = "";
+    document.getElementById("scanScreenshotsSection").style.display = "none";
+
+    try {
+        const login_url = document.getElementById("scanLoginUrlInput").value.trim() || undefined;
+        const username = document.getElementById("scanUsernameInput").value.trim() || undefined;
+        const password = document.getElementById("scanPasswordInput").value.trim() || undefined;
+        const pre_actions = getPreActions();
+
+        const resp = await fetch("/api/website-scan/run", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({url, checks, login_url, username, password, pre_actions}),
+        });
+        const data = await resp.json();
+        if (data.error) {
+            alert(data.error);
+            onScanFinished();
+            return;
+        }
+        scanRunId = data.run_id;
+        startScanStream(scanRunId);
+    } catch (e) {
+        alert("Fehler beim Starten: " + e.message);
+        onScanFinished();
+    }
+}
+
+function startScanStream(runId) {
+    if (scanEventSource) scanEventSource.close();
+    scanEventSource = new EventSource(`/api/website-scan/stream/${runId}`);
+
+    scanEventSource.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.error) {
+            onScanFinished();
+            return;
+        }
+        if (msg.type === "result") {
+            addScanResult(msg.data);
+        } else if (msg.type === "done") {
+            onScanDone(msg.data);
+            scanEventSource.close();
+        }
+    };
+
+    scanEventSource.onerror = () => {
+        scanEventSource.close();
+        onScanFinished();
+    };
+}
+
+function addScanResult(result) {
+    const html = renderScanResult(result);
+
+    // Add to "All" tab
+    document.getElementById("scanListAll").insertAdjacentHTML("beforeend", html);
+
+    // Add to category tab
+    const catMap = {
+        accessibility: "scanListAccessibility",
+        performance: "scanListPerformance",
+        links: "scanListLinks",
+        responsive: "scanListResponsive",
+        seo: "scanListSeo",
+    };
+    const listId = catMap[result.category];
+    if (listId) {
+        document.getElementById(listId).insertAdjacentHTML("beforeend", html);
+    }
+
+    // Screenshot zur Gallery hinzufügen
+    if (result.screenshot) {
+        const grid = document.getElementById("scanScreenshotGrid");
+        const section = document.getElementById("scanScreenshotsSection");
+        section.style.display = "block";
+        const label = result.viewport ? result.viewport.charAt(0).toUpperCase() + result.viewport.slice(1) : result.name;
+        grid.insertAdjacentHTML("beforeend", `
+            <div class="screenshot-item" onclick="window.open('${escapeAttr(result.screenshot)}')">
+                <img src="${escapeAttr(result.screenshot)}" alt="${escapeAttr(label)}" loading="lazy">
+                <span class="screenshot-label">${escapeHtml(label)}</span>
+            </div>
+        `);
+    }
+}
+
+function renderScanResult(r) {
+    const icons = {passed: "&#10003;", failed: "&#10007;", warning: "&#9888;", info: "&#8505;"};
+    const classes = {passed: "passed", failed: "failed", warning: "warning", info: "info"};
+    const icon = icons[r.status] || "&#8226;";
+    const cls = classes[r.status] || "";
+
+    let extra = "";
+    if (r.screenshot) {
+        extra = `<div class="scan-screenshot"><img src="${escapeHtml(r.screenshot)}" alt="${escapeHtml(r.viewport || '')}" onclick="window.open(this.src)"></div>`;
+    }
+    if (r.help_url) {
+        extra += ` <a href="${escapeHtml(r.help_url)}" target="_blank" rel="noopener" style="font-size:0.8rem;">Mehr Info</a>`;
+    }
+
+    return `<div class="test-item ${cls}">
+        <span class="test-icon">${icon}</span>
+        <div class="test-info">
+            <span class="test-name">${escapeHtml(r.name)}</span>
+            <span class="severity-badge ${r.severity}">${escapeHtml(r.severity)}</span>
+            <div class="test-details" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.2rem;">${escapeHtml(r.details)}</div>
+            ${extra}
+        </div>
+        <span class="test-tag">${escapeHtml(r.category)}</span>
+    </div>`;
+}
+
+function onScanDone(data) {
+    const summary = `${data.passed || 0} bestanden, ${data.failed || 0} fehlgeschlagen, ${data.warnings || 0} Warnungen`;
+    document.getElementById("scanResultsSummary").textContent = summary;
+    onScanFinished();
+}
+
+function onScanFinished() {
+    document.getElementById("scanProgressBar").style.display = "none";
+    document.getElementById("btnStartScan").style.display = "inline-flex";
+    document.getElementById("btnCancelScan").style.display = "none";
+}
+
+async function cancelWebsiteScan() {
+    if (!scanRunId) return;
+    await fetch(`/api/website-scan/cancel/${scanRunId}`, {method: "POST"});
+    if (scanEventSource) scanEventSource.close();
+    onScanFinished();
+}
+
+function switchScanTab(tabName) {
+    // Deactivate all scan tabs
+    document.querySelectorAll("#scanResultsSection .tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll("#scanResultsSection .tab-content").forEach(c => c.classList.remove("active"));
+
+    // Activate selected
+    document.querySelector(`#scanResultsSection .tab[data-tab="${tabName}"]`).classList.add("active");
+    document.getElementById(`tab-${tabName}`).classList.add("active");
+}
+
+// ========== Vor-Aktionen ==========
+
+let detectedData = null;
+
+function getPreActions() {
+    const actions = [];
+
+    // Erkannte Felder mit eingegebenen Werten
+    document.querySelectorAll(".detected-field-row").forEach(row => {
+        const label = row.dataset.label;
+        const value = row.querySelector(".df-value").value.trim();
+        if (value) {
+            actions.push({type: "fill", label, value});
+        }
+    });
+
+    // Ausgewählte Buttons
+    document.querySelectorAll(".detected-btn-row input:checked").forEach(cb => {
+        actions.push({type: "click", label: cb.dataset.label});
+        // Kurz warten nach Klick
+        actions.push({type: "wait", value: "2000"});
+    });
+
+    return actions;
+}
+
+async function detectPageElements() {
+    const url = document.getElementById("scanUrlInput").value.trim();
+    if (!url) { alert("Bitte zuerst eine URL eingeben."); return; }
+
+    const btn = document.getElementById("btnDetect");
+    btn.disabled = true;
+    btn.textContent = "Analysiere...";
+
+    try {
+        const resp = await fetch("/api/website-scan/detect", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({url}),
+        });
+        const data = await resp.json();
+        if (data.error) { alert(data.error); return; }
+        detectedData = data;
+        renderDetectedForm(data);
+    } catch (e) {
+        alert("Fehler: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Seite analysieren";
+    }
+}
+
+function renderDetectedForm(data) {
+    const fieldsContainer = document.getElementById("detectedFields");
+    const buttonsContainer = document.getElementById("detectedButtons");
+    const section = document.getElementById("preActionsDetected");
+    fieldsContainer.innerHTML = "";
+    buttonsContainer.innerHTML = "";
+
+    const inputs = data.inputs || [];
+    const buttons = data.buttons || [];
+
+    if (inputs.length === 0 && buttons.length === 0) {
+        fieldsContainer.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Keine interaktiven Elemente gefunden.</p>';
+        section.style.display = "block";
+        return;
+    }
+
+    // Eingabefelder als echte Formularzeilen anzeigen
+    inputs.forEach(inp => {
+        const label = inp.placeholder || inp.label || inp.name || "Unbenannt";
+        const inputType = inp.type === "password" ? "password" : "text";
+        const row = document.createElement("div");
+        row.className = "detected-field-row";
+        row.dataset.label = label;
+        row.innerHTML = `
+            <label class="df-label">${escapeHtml(label)}</label>
+            <input type="${inputType}" class="text-input df-value" placeholder="Wert eingeben (leer = überspringen)">
+        `;
+        fieldsContainer.appendChild(row);
+    });
+
+    // Buttons als Checkboxen anzeigen
+    buttons.forEach(b => {
+        const row = document.createElement("label");
+        row.className = "detected-btn-row";
+        row.innerHTML = `
+            <input type="checkbox" data-label="${escapeAttr(b.text)}">
+            <span>${escapeHtml(b.text)}</span>
+        `;
+        buttonsContainer.appendChild(row);
+    });
+
+    section.style.display = "block";
+}
+
+function escapeAttr(str) {
+    if (!str) return "";
+    return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
 // ========== Hilfsfunktionen ==========

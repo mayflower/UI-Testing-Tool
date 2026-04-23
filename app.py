@@ -154,6 +154,14 @@ def serve_screenshot(name):
     return send_from_directory(str(SCREENSHOTS_DIR), name)
 
 
+@app.route("/static_screenshots/website_scan/<name>")
+def serve_website_scan_screenshot(name):
+    """Website-Scan Screenshots ausliefern."""
+    from flask import send_from_directory
+    scan_dir = SCREENSHOTS_DIR / "website_scan"
+    return send_from_directory(str(scan_dir), name)
+
+
 @app.route("/live-browser")
 def live_browser():
     """Aktueller Live-Screenshot des Playwright-Browsers (fuer MFA-Anzeige)."""
@@ -648,6 +656,161 @@ def api_jira_create_tickets():
         return jsonify({"ok": True, "tickets": created})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
+
+
+# ──────────────────────────────────────────────────────────────
+# Website-Scan Endpoints
+# ──────────────────────────────────────────────────────────────
+
+# Aktive Website-Scans (getrennt von Chatbot test_runs)
+website_scans: dict[str, dict] = {}
+
+
+def _run_website_scan_worker(
+    run_id: str, url: str, checks: list[str],
+    login_url: str | None = None, username: str | None = None, password: str | None = None,
+    pre_actions: list[dict] | None = None,
+):
+    """Worker-Thread für Website-Scan."""
+    from utils.website_scanner import WebsiteScanner
+
+    run = website_scans[run_id]
+    run["status"] = "running"
+    run["started_at"] = datetime.now().isoformat()
+
+    scanner = WebsiteScanner(url, checks, login_url=login_url, username=username, password=password, pre_actions=pre_actions)
+    run["_scanner"] = scanner
+
+    try:
+        scanner.run()
+        run["results"] = scanner.results
+        run["status"] = scanner.status
+    except Exception as e:
+        run["status"] = "error"
+        run["error"] = str(e)
+    finally:
+        run["finished_at"] = datetime.now().isoformat()
+        run.pop("_scanner", None)
+
+
+@app.route("/api/website-scan/run", methods=["POST"])
+def api_website_scan_run():
+    """Starte einen Website-Scan."""
+    data = request.get_json() or {}
+    url = (data.get("url") or "").strip()
+    checks = data.get("checks") or ["accessibility", "performance", "links", "responsive", "seo"]
+    login_url = (data.get("login_url") or "").strip() or None
+    username = (data.get("username") or "").strip() or None
+    password = (data.get("password") or "").strip() or None
+    pre_actions = data.get("pre_actions") or []
+
+    if not url:
+        return jsonify({"error": "URL ist erforderlich"}), 400
+
+    run_id = str(uuid.uuid4())[:8]
+    website_scans[run_id] = {
+        "id": run_id,
+        "url": url,
+        "checks": checks,
+        "status": "starting",
+        "results": [],
+        "output": [],
+    }
+
+    thread = threading.Thread(
+        target=_run_website_scan_worker,
+        args=(run_id, url, checks, login_url, username, password, pre_actions),
+        daemon=True,
+    )
+    thread.start()
+    return jsonify({"run_id": run_id})
+
+
+@app.route("/api/website-scan/stream/<run_id>")
+def api_website_scan_stream(run_id):
+    """SSE-Stream für Website-Scan Live-Updates."""
+    def generate():
+        last_count = 0
+        while True:
+            run = website_scans.get(run_id)
+            if not run:
+                yield f"data: {json.dumps({'error': 'not found'})}\n\n"
+                break
+
+            scanner = run.get("_scanner")
+            results = scanner.results if scanner else run.get("results", [])
+
+            if len(results) > last_count:
+                for r in results[last_count:]:
+                    yield f"data: {json.dumps({'type': 'result', 'data': r})}\n\n"
+                last_count = len(results)
+
+            if run["status"] in ("completed", "error", "cancelled"):
+                # Finale Ergebnisse sicherstellen
+                results = run.get("results", []) if not scanner else scanner.results
+                passed = sum(1 for r in results if r["status"] == "passed")
+                failed = sum(1 for r in results if r["status"] == "failed")
+                warnings = sum(1 for r in results if r["status"] == "warning")
+                yield f"data: {json.dumps({'type': 'done', 'data': {'status': run['status'], 'passed': passed, 'failed': failed, 'warnings': warnings, 'total': len(results)}})}\n\n"
+                break
+
+            time.sleep(0.5)
+
+    return Response(generate(), mimetype="text/event-stream")
+
+
+@app.route("/api/website-scan/detect", methods=["POST"])
+def api_website_scan_detect():
+    """Erkennt interaktive Elemente auf einer Seite (Inputs, Buttons)."""
+    data = request.get_json() or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"error": "URL ist erforderlich"}), 400
+
+    try:
+        from playwright.sync_api import sync_playwright
+        from config.settings import HEADLESS, SLOW_MO
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=HEADLESS, slow_mo=SLOW_MO)
+            page = browser.new_page(viewport={"width": 1440, "height": 900}, locale="de-DE")
+            page.goto(url, wait_until="networkidle", timeout=15000)
+            page.wait_for_timeout(1000)
+
+            elements = page.evaluate("""() => {
+                const inputs = [];
+                document.querySelectorAll('input:not([type="hidden"]), textarea').forEach(el => {
+                    if (!el.offsetParent && el.type !== 'hidden') return;
+                    inputs.push({
+                        placeholder: el.placeholder || '',
+                        label: el.labels?.[0]?.textContent?.trim() || '',
+                        name: el.name || '',
+                        type: el.type || 'text',
+                    });
+                });
+                const buttons = [];
+                document.querySelectorAll('button, a[role="button"], input[type="submit"]').forEach(el => {
+                    const text = el.textContent?.trim() || el.value || '';
+                    if (text && el.offsetParent) buttons.push({text});
+                });
+                return {inputs, buttons};
+            }""")
+            browser.close()
+            return jsonify(elements)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/website-scan/cancel/<run_id>", methods=["POST"])
+def api_website_scan_cancel(run_id):
+    """Laufenden Website-Scan abbrechen."""
+    run = website_scans.get(run_id)
+    if not run:
+        return jsonify({"error": "Scan nicht gefunden"}), 404
+    scanner = run.get("_scanner")
+    if scanner:
+        scanner.cancel()
+    return jsonify({"status": "ok"})
 
 
 def main():

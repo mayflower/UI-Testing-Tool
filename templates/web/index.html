@@ -19,6 +19,15 @@
     </header>
 
     <main>
+        <!-- Mode-Switcher -->
+        <nav class="mode-switcher">
+            <button class="mode-btn active" data-mode="chatbot" onclick="switchMode('chatbot')">Chatbot-Test</button>
+            <button class="mode-btn" data-mode="website" onclick="switchMode('website')">Website-Test</button>
+        </nav>
+
+        <!-- ============ CHATBOT MODE ============ -->
+        <div id="mode-chatbot">
+
         <!-- URL & Steuerung -->
         <section class="control-panel">
             <div class="card">
@@ -227,6 +236,124 @@
                 </div>
             </div>
         </section>
+
+        </div><!-- /mode-chatbot -->
+
+        <!-- ============ WEBSITE MODE ============ -->
+        <div id="mode-website" style="display:none;">
+
+        <!-- Website-Scan Steuerung -->
+        <section class="control-panel">
+            <div class="card">
+                <h2>Website-URL</h2>
+                <div class="url-input-row">
+                    <input type="url" id="scanUrlInput" class="url-input"
+                           placeholder="https://example.com" spellcheck="false">
+                    <button id="btnStartScan" class="btn btn-primary" onclick="startWebsiteScan()">
+                        Scan starten
+                    </button>
+                    <button id="btnCancelScan" class="btn btn-danger" onclick="cancelWebsiteScan()" style="display:none;">
+                        Abbrechen
+                    </button>
+                </div>
+                <!-- Login-Credentials (aufklappbar) -->
+                <details class="login-section" id="scanLoginSection">
+                    <summary class="login-toggle">Login-Credentials (optional)</summary>
+                    <div class="login-fields">
+                        <div class="form-row" style="margin-top: 0.75rem;">
+                            <div class="form-group">
+                                <label for="scanLoginUrlInput">Login-URL</label>
+                                <input type="url" id="scanLoginUrlInput" class="text-input"
+                                       placeholder="https://example.com/login" spellcheck="false">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-top: 0.5rem;">
+                            <div class="form-group">
+                                <label for="scanUsernameInput">Benutzername</label>
+                                <input type="text" id="scanUsernameInput" class="text-input"
+                                       placeholder="Benutzername" autocomplete="username">
+                            </div>
+                            <div class="form-group">
+                                <label for="scanPasswordInput">Passwort</label>
+                                <input type="password" id="scanPasswordInput" class="text-input"
+                                       placeholder="Passwort" autocomplete="current-password">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Vor-Aktionen -->
+                <div id="preActionsSection">
+                    <div id="preActionsDetected" style="display:none;margin-top:1rem;">
+                        <h3 style="font-size:0.95rem;margin-bottom:0.5rem;">Erkannte Felder</h3>
+                        <div id="detectedFields"></div>
+                        <h3 style="font-size:0.95rem;margin:0.75rem 0 0.5rem;">Erkannte Aktionen</h3>
+                        <div id="detectedButtons"></div>
+                    </div>
+                    <button class="btn btn-primary" id="btnDetect" onclick="detectPageElements()" style="margin-top:0.75rem;">Seite analysieren</button>
+                </div>
+
+                <div class="scan-checks" style="margin-top: 0.75rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label class="check-label"><input type="checkbox" value="accessibility" checked> Accessibility</label>
+                    <label class="check-label"><input type="checkbox" value="performance" checked> Performance</label>
+                    <label class="check-label"><input type="checkbox" value="links" checked> Broken Links</label>
+                    <label class="check-label"><input type="checkbox" value="responsive" checked> Responsive</label>
+                    <label class="check-label"><input type="checkbox" value="seo" checked> SEO</label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scan-Ergebnisse -->
+        <section class="results-section" id="scanResultsSection" style="display:none;">
+            <div class="card">
+                <div class="results-header">
+                    <h2>Scan-Ergebnisse</h2>
+                    <div class="results-summary" id="scanResultsSummary"></div>
+                </div>
+
+                <div class="progress-bar" id="scanProgressBar" style="display:none;">
+                    <div class="progress-fill indeterminate" id="scanProgressFill"></div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab active" data-tab="scan-all" onclick="switchScanTab('scan-all')">Alle</button>
+                    <button class="tab" data-tab="scan-accessibility" onclick="switchScanTab('scan-accessibility')">Accessibility</button>
+                    <button class="tab" data-tab="scan-performance" onclick="switchScanTab('scan-performance')">Performance</button>
+                    <button class="tab" data-tab="scan-links" onclick="switchScanTab('scan-links')">Links</button>
+                    <button class="tab" data-tab="scan-responsive" onclick="switchScanTab('scan-responsive')">Responsive</button>
+                    <button class="tab" data-tab="scan-seo" onclick="switchScanTab('scan-seo')">SEO</button>
+                </div>
+
+                <div class="tab-content active" id="tab-scan-all">
+                    <div class="test-list" id="scanListAll"></div>
+                </div>
+                <div class="tab-content" id="tab-scan-accessibility">
+                    <div class="test-list" id="scanListAccessibility"></div>
+                </div>
+                <div class="tab-content" id="tab-scan-performance">
+                    <div class="test-list" id="scanListPerformance"></div>
+                </div>
+                <div class="tab-content" id="tab-scan-links">
+                    <div class="test-list" id="scanListLinks"></div>
+                </div>
+                <div class="tab-content" id="tab-scan-responsive">
+                    <div class="test-list" id="scanListResponsive"></div>
+                </div>
+                <div class="tab-content" id="tab-scan-seo">
+                    <div class="test-list" id="scanListSeo"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screenshots -->
+        <section class="bottom-section" id="scanScreenshotsSection" style="display:none;">
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2>Screenshots</h2>
+                <div class="screenshot-grid" id="scanScreenshotGrid"></div>
+            </div>
+        </section>
+
+        </div><!-- /mode-website -->
 
         <!-- Discovery-Modal -->
         <div class="modal" id="discoveryModal" style="display:none;">
