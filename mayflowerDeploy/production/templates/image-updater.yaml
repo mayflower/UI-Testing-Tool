@@ -1,19 +1,29 @@
+{{- $ctx := dict "found" false }}
+{{- range $name, $config := .Values }}
+{{- if eq (include "ui-testing-tool.isImageUpdated" (dict "config" $config)) "true" }}
+{{- $_ := set $ctx "found" true }}
+{{- end }}
+{{- end }}
+{{- if index $ctx "found" }}
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
   name: {{ .Release.Name }}
-spec:
   namespace: argocd
+spec:
   applicationRefs:
-    - namePattern: "ui-testing-tool-production"
+    - namePattern: {{ .Release.Name | quote }}
       images:
-        {{- range $name, $img := .Values.images }}
+        {{- range $name, $config := .Values }}
+        {{- if eq (include "ui-testing-tool.isImageUpdated" (dict "config" $config)) "true" }}
         - alias: {{ $name }}
-          imageName: "{{ $img.image }}:{{ $img.tag }}"
+          imageName: "{{ index $config "image" "repository" }}:{{ index $config "image" "tag" }}"
           commonUpdateSettings:
             updateStrategy: digest
           manifestTargets:
             helm:
-              name: "images.{{ $name }}.image"
-              tag: "images.{{ $name }}.tag"
+              name: "{{ $name }}.image.repository"
+              tag: "{{ $name }}.image.tag"
         {{- end }}
+        {{- end }}
+{{- end }}

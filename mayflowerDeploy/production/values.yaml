@@ -2,10 +2,10 @@ environment: production
 
 domain: ui-testing-tool.data.mayflower.tech
 
-images:
-  app:
-    image: ghcr.io/mayflower/ui-testing-tool
-    tag: "9cc9f91d8334a53fee787657eab6ee50567bc2df"
+app:
+  image:
+    repository: ghcr.io/mayflower/ui-testing-tool
+    tag: latest
 
 config:
   FLASK_ENV: "production"
