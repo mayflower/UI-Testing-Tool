@@ -5,7 +5,7 @@ domain: ui-testing-tool.data.mayflower.tech
 images:
   app:
     image: ghcr.io/mayflower/ui-testing-tool
-    tag: latest # managed by argocd-image-updater
+    tag: "9cc9f91d8334a53fee787657eab6ee50567bc2df"
 
 config:
   FLASK_ENV: "production"
