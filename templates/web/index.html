@@ -246,15 +246,13 @@
         <!-- Website-Scan Steuerung -->
         <section class="control-panel">
             <div class="card">
-                <h2>Website-URL</h2>
+                <!-- Schritt 1: URL eingeben & Seite analysieren -->
+                <h2>1. Website-URL</h2>
                 <div class="url-input-row">
                     <input type="url" id="scanUrlInput" class="url-input"
                            placeholder="https://example.com" spellcheck="false">
-                    <button id="btnStartScan" class="btn btn-primary" onclick="startWebsiteScan()">
-                        Scan starten
-                    </button>
-                    <button id="btnCancelScan" class="btn btn-danger" onclick="cancelWebsiteScan()" style="display:none;">
-                        Abbrechen
+                    <button class="btn btn-primary" id="btnDetect" onclick="detectPageElements()">
+                        Seite analysieren
                     </button>
                 </div>
                 <!-- Login-Credentials (aufklappbar) -->
@@ -283,23 +281,35 @@
                     </div>
                 </details>
 
-                <!-- Vor-Aktionen -->
+                <!-- Schritt 2: Erkannte Elemente & Vor-Aktionen -->
                 <div id="preActionsSection">
                     <div id="preActionsDetected" style="display:none;margin-top:1rem;">
-                        <h3 style="font-size:0.95rem;margin-bottom:0.5rem;">Erkannte Felder</h3>
+                        <h2 style="margin-bottom:0.75rem;">2. Erkannte Elemente</h2>
+                        <h3 style="font-size:0.95rem;margin-bottom:0.5rem;">Felder</h3>
                         <div id="detectedFields"></div>
-                        <h3 style="font-size:0.95rem;margin:0.75rem 0 0.5rem;">Erkannte Aktionen</h3>
+                        <h3 style="font-size:0.95rem;margin:0.75rem 0 0.5rem;">Aktionen</h3>
                         <div id="detectedButtons"></div>
                     </div>
-                    <button class="btn btn-primary" id="btnDetect" onclick="detectPageElements()" style="margin-top:0.75rem;">Seite analysieren</button>
                 </div>
 
-                <div class="scan-checks" style="margin-top: 0.75rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <label class="check-label"><input type="checkbox" value="accessibility" checked> Accessibility</label>
-                    <label class="check-label"><input type="checkbox" value="performance" checked> Performance</label>
-                    <label class="check-label"><input type="checkbox" value="links" checked> Broken Links</label>
-                    <label class="check-label"><input type="checkbox" value="responsive" checked> Responsive</label>
-                    <label class="check-label"><input type="checkbox" value="seo" checked> SEO</label>
+                <!-- Schritt 3: Checks auswählen & Scan starten -->
+                <div style="margin-top: 1.25rem;">
+                    <h2 style="margin-bottom:0.75rem;">3. Scan konfigurieren & starten</h2>
+                    <div class="scan-checks" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <label class="check-label"><input type="checkbox" value="accessibility" checked> Accessibility</label>
+                        <label class="check-label"><input type="checkbox" value="performance" checked> Performance</label>
+                        <label class="check-label"><input type="checkbox" value="links" checked> Broken Links</label>
+                        <label class="check-label"><input type="checkbox" value="responsive" checked> Responsive</label>
+                        <label class="check-label"><input type="checkbox" value="seo" checked> SEO</label>
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <button id="btnStartScan" class="btn btn-primary" onclick="startWebsiteScan()">
+                            Scan starten
+                        </button>
+                        <button id="btnCancelScan" class="btn btn-danger" onclick="cancelWebsiteScan()" style="display:none;">
+                            Abbrechen
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>

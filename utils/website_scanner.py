@@ -59,6 +59,7 @@ class WebsiteScanner:
         self.results: list[dict] = []
         self.status = "pending"
         self._cancel = False
+        self._current_page_label = ""
 
     def _perform_login(self, page):
         """Login durchführen falls Credentials vorhanden."""
@@ -157,6 +158,22 @@ class WebsiteScanner:
             return el.first
         raise ValueError(f"Button '{label}' nicht gefunden")
 
+    def _run_checks(self, page, context, browser, dispatch, page_label: str = ""):
+        """Führe alle ausgewählten Checks für die aktuelle Seite aus."""
+        self._current_page_label = page_label
+        for check_name in self.checks:
+            if self._cancel:
+                self.status = "cancelled"
+                return
+            fn = dispatch.get(check_name)
+            if fn:
+                try:
+                    fn(page, context, browser, page_label=page_label)
+                except Exception as e:
+                    self._add(check_name, f"{check_name}_error", "failed", "serious",
+                              f"Fehler bei {check_name}: {e}")
+        self._current_page_label = ""
+
     def run(self):
         """Führe alle ausgewählten Checks aus."""
         self.status = "running"
@@ -182,7 +199,7 @@ class WebsiteScanner:
                 except Exception:
                     pass  # Seiten mit Websockets/Polling werden nie "idle"
                 # Warten auf SPA-Hydration (React, Vue, etc.)
-                page.wait_for_timeout(3000)
+                self._wait_for_spa_hydration(page)
 
                 # Falls kein separater Login-URL aber Credentials vorhanden:
                 # prüfe ob auf der Zielseite ein Login-Formular ist
@@ -192,13 +209,6 @@ class WebsiteScanner:
                 # Screenshot der Startseite
                 self._take_screenshot(page, "startseite", "Startseite")
 
-                # Vor-Aktionen ausführen (Formular ausfüllen, Buttons klicken etc.)
-                if self.pre_actions:
-                    self._execute_pre_actions(page)
-                    page.wait_for_load_state("networkidle", timeout=10000)
-                    # Screenshot nach Vor-Aktionen
-                    self._take_screenshot(page, "nach_aktionen", "Nach Vor-Aktionen")
-
             except Exception as e:
                 self._add("general", "page_load", "failed", "critical",
                           f"Seite konnte nicht geladen werden: {e}")
@@ -206,17 +216,30 @@ class WebsiteScanner:
                 browser.close()
                 return
 
-            for check_name in self.checks:
-                if self._cancel:
-                    self.status = "cancelled"
-                    break
-                fn = dispatch.get(check_name)
-                if fn:
+            if self.pre_actions:
+                # === Seite 1: Startseite scannen ===
+                self._run_checks(page, context, browser, dispatch, page_label="Startseite")
+
+                # === Vor-Aktionen ausführen → Seite 2 ===
+                try:
+                    self._execute_pre_actions(page)
                     try:
-                        fn(page, context, browser)
-                    except Exception as e:
-                        self._add(check_name, f"{check_name}_error", "failed", "serious",
-                                  f"Fehler bei {check_name}: {e}")
+                        page.wait_for_load_state("networkidle", timeout=10000)
+                    except Exception:
+                        pass
+                    self._wait_for_spa_hydration(page)
+                    self._take_screenshot(page, "nach_aktionen", "Nach Vor-Aktionen")
+                except Exception as e:
+                    self._add("general", "pre_action_navigate", "failed", "serious",
+                              f"Navigation nach Vor-Aktionen fehlgeschlagen: {e}")
+
+                # === Seite 2: Folgeseite scannen ===
+                current_url = page.url
+                page_label = urlparse(current_url).path.strip("/") or "Folgeseite"
+                self._run_checks(page, context, browser, dispatch, page_label=page_label)
+            else:
+                # Nur eine Seite — kein Label nötig
+                self._run_checks(page, context, browser, dispatch)
 
             if self.status == "running":
                 self.status = "completed"
@@ -225,7 +248,38 @@ class WebsiteScanner:
     def cancel(self):
         self._cancel = True
 
+    def _wait_for_spa_hydration(self, page, timeout_ms=10000):
+        """Warte bis SPA-Frameworks (React, Vue, etc.) den DOM hydriert haben.
+
+        Prüft ob sich der DOM stabilisiert hat (keine neuen Elemente mehr).
+        """
+        page.wait_for_timeout(1000)
+        try:
+            page.wait_for_function(
+                """() => {
+                    return new Promise(resolve => {
+                        let last = document.body.innerHTML.length;
+                        const check = () => {
+                            const now = document.body.innerHTML.length;
+                            if (now === last) {
+                                resolve(true);
+                            } else {
+                                last = now;
+                                setTimeout(check, 500);
+                            }
+                        };
+                        setTimeout(check, 500);
+                    });
+                }""",
+                timeout=timeout_ms,
+            )
+        except Exception:
+            pass  # Timeout ist ok — DOM ist dann stabil genug
+
     def _add(self, category: str, name: str, status: str, severity: str, details: str, **extra):
+        page_label = getattr(self, "_current_page_label", "")
+        if page_label:
+            category = f"{page_label} — {category}"
         result = {
             "category": category,
             "name": name,
@@ -239,7 +293,7 @@ class WebsiteScanner:
     # ------------------------------------------------------------------
     # Accessibility
     # ------------------------------------------------------------------
-    def _check_accessibility(self, page, context, browser):
+    def _check_accessibility(self, page, context, browser, page_label=""):
         from axe_playwright_python.sync_playwright import Axe
         axe = Axe()
         results = axe.run(page)
@@ -265,7 +319,7 @@ class WebsiteScanner:
     # ------------------------------------------------------------------
     # Performance
     # ------------------------------------------------------------------
-    def _check_performance(self, page, context, browser):
+    def _check_performance(self, page, context, browser, page_label=""):
         metrics = page.evaluate("""() => {
             const nav = performance.getEntriesByType('navigation')[0] || {};
             const paint = performance.getEntriesByType('paint');
@@ -319,7 +373,7 @@ class WebsiteScanner:
     # ------------------------------------------------------------------
     # Broken Links
     # ------------------------------------------------------------------
-    def _check_links(self, page, context, browser):
+    def _check_links(self, page, context, browser, page_label=""):
         urls = page.evaluate("""() => {
             const links = new Set();
             document.querySelectorAll('a[href]').forEach(a => {
@@ -372,7 +426,7 @@ class WebsiteScanner:
     # ------------------------------------------------------------------
     # Responsive
     # ------------------------------------------------------------------
-    def _check_responsive(self, page, context, browser):
+    def _check_responsive(self, page, context, browser, page_label=""):
         scan_dir = SCREENSHOTS_DIR / "website_scan"
         scan_dir.mkdir(parents=True, exist_ok=True)
 
@@ -406,15 +460,14 @@ class WebsiteScanner:
         # Viewport zurücksetzen und Seite neu laden für sauberen DOM-State
         page.set_viewport_size({"width": 1440, "height": 900})
         page.reload(wait_until="domcontentloaded")
-        page.wait_for_timeout(2000)
+        self._wait_for_spa_hydration(page)
 
     # ------------------------------------------------------------------
     # SEO
     # ------------------------------------------------------------------
-    def _check_seo(self, page, context, browser):
+    def _check_seo(self, page, context, browser, page_label=""):
         # Sicherstellen dass SPA-Frameworks (React etc.) fertig gemountet haben
-        page.wait_for_load_state("domcontentloaded")
-        page.wait_for_timeout(2000)
+        self._wait_for_spa_hydration(page)
         seo = page.evaluate("""() => {
             const meta = (name) => {
                 const el = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
