@@ -176,7 +176,13 @@ class WebsiteScanner:
                 if self.login_url:
                     self._perform_login(page)
 
-                page.goto(self.url, wait_until="networkidle", timeout=30000)
+                page.goto(self.url, wait_until="domcontentloaded", timeout=60000)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=15000)
+                except Exception:
+                    pass  # Seiten mit Websockets/Polling werden nie "idle"
+                # Warten auf SPA-Hydration (React, Vue, etc.)
+                page.wait_for_timeout(3000)
 
                 # Falls kein separater Login-URL aber Credentials vorhanden:
                 # prüfe ob auf der Zielseite ein Login-Formular ist
@@ -397,13 +403,18 @@ class WebsiteScanner:
                 viewport=vp["name"],
             )
 
-        # Viewport zurücksetzen
+        # Viewport zurücksetzen und Seite neu laden für sauberen DOM-State
         page.set_viewport_size({"width": 1440, "height": 900})
+        page.reload(wait_until="domcontentloaded")
+        page.wait_for_timeout(2000)
 
     # ------------------------------------------------------------------
     # SEO
     # ------------------------------------------------------------------
     def _check_seo(self, page, context, browser):
+        # Sicherstellen dass SPA-Frameworks (React etc.) fertig gemountet haben
+        page.wait_for_load_state("domcontentloaded")
+        page.wait_for_timeout(2000)
         seo = page.evaluate("""() => {
             const meta = (name) => {
                 const el = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
