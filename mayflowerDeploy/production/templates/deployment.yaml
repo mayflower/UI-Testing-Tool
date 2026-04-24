@@ -23,7 +23,7 @@ spec:
       containers:
         - name: ui-testing-tool
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 5000
