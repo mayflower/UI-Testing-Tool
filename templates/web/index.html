@@ -23,6 +23,7 @@
         <nav class="mode-switcher">
             <button class="mode-btn active" data-mode="chatbot" onclick="switchMode('chatbot')">Chatbot-Test</button>
             <button class="mode-btn" data-mode="website" onclick="switchMode('website')">Website-Test</button>
+            <button class="mode-btn" data-mode="hilfe" onclick="switchMode('hilfe')">Hilfe</button>
         </nav>
 
         <!-- ============ CHATBOT MODE ============ -->
@@ -441,6 +442,270 @@
                 </div>
             </div>
         </div>
+        <!-- ============ HILFE MODE ============ -->
+        <div id="mode-hilfe" style="display:none;">
+
+        <section class="help-section">
+            <div class="card help-card">
+                <h1 class="help-title">Anleitung</h1>
+                <p class="help-intro">Dieses Tool prüft Webseiten und Chatbots automatisch auf Fehler, Barrierefreiheit und Benutzerfreundlichkeit. Hier wird Schritt für Schritt erklärt, wie es funktioniert.</p>
+
+                <nav class="help-nav">
+                    <a href="#help-chatbot" class="help-nav-btn" onclick="scrollToHelp('help-chatbot')">Chatbot-Test</a>
+                    <a href="#help-website" class="help-nav-btn" onclick="scrollToHelp('help-website')">Website-Test</a>
+                    <a href="#help-reports" class="help-nav-btn" onclick="scrollToHelp('help-reports')">Berichte</a>
+                    <a href="#help-faq" class="help-nav-btn" onclick="scrollToHelp('help-faq')">Häufige Fragen</a>
+                </nav>
+            </div>
+
+            <!-- ===== CHATBOT-TEST ===== -->
+            <div class="card help-card" id="help-chatbot">
+                <h2>Chatbot-Test</h2>
+                <p class="help-subtitle">Prüft den KI-Chatbot auf Aussehen, Bedienbarkeit und Barrierefreiheit.</p>
+
+                <div class="help-steps">
+                    <div class="help-step">
+                        <div class="help-step-number">1</div>
+                        <div class="help-step-content">
+                            <h3>Webseite eingeben</h3>
+                            <p>Oben im Feld <strong>"Chatbot-URL"</strong> die Adresse der Webseite eingeben, auf der sich der Chatbot befindet.</p>
+                            <div class="help-example">Beispiel: <code>https://stage.ecki.ai/</code></div>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">2</div>
+                        <div class="help-step-content">
+                            <h3>Login-Daten eingeben (falls nötig)</h3>
+                            <p>Falls die Seite ein Login erfordert: Auf <strong>"Login-Credentials (optional)"</strong> klicken und dort die Login-URL, Benutzername und Passwort eintragen.</p>
+                            <div class="help-tip">Tipp: Die URL kann zusammen mit den Login-Daten über den Button "Speichern" gespeichert werden. So muss man sie beim nächsten Mal nicht erneut eingeben.</div>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">3</div>
+                        <div class="help-step-content">
+                            <h3>Testsuite auswählen</h3>
+                            <p>Im Dropdown <strong>"Testsuite"</strong> festlegen, welche Tests laufen sollen:</p>
+                            <ul class="help-list">
+                                <li><strong>Alle Tests</strong> — Führt alles auf einmal aus (empfohlen)</li>
+                                <li><strong>UI-Konsistenz</strong> — Prüft das Aussehen: Farben, Logos, Layout</li>
+                                <li><strong>UX-Flows</strong> — Prüft die Bedienung: Nachrichten senden, Antworten erhalten, Fehlermeldungen</li>
+                                <li><strong>Accessibility</strong> — Prüft Barrierefreiheit: Tastatursteuerung, Screenreader-Kompatibilität, Kontraste</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">4</div>
+                        <div class="help-step-content">
+                            <h3>Tests starten</h3>
+                            <p>Auf den blauen Button <strong>"Tests starten"</strong> klicken. Die Tests laufen nun automatisch durch. Das kann je nach Auswahl 1–5 Minuten dauern.</p>
+                            <div class="help-tip">Während die Tests laufen, wird ein Fortschrittsbalken angezeigt. Die Ergebnisse erscheinen nach und nach in der Liste darunter.</div>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">5</div>
+                        <div class="help-step-content">
+                            <h3>Ergebnisse ansehen</h3>
+                            <p>Nach Abschluss erscheinen die Ergebnisse unter <strong>"Testergebnisse"</strong>. Jeder Test wird mit einem Status angezeigt:</p>
+                            <ul class="help-list">
+                                <li><span class="help-badge help-badge-pass">Bestanden</span> — Alles in Ordnung</li>
+                                <li><span class="help-badge help-badge-fail">Fehler</span> — Problem gefunden, muss behoben werden</li>
+                                <li><span class="help-badge help-badge-skip">Übersprungen</span> — Test konnte nicht ausgeführt werden</li>
+                            </ul>
+                            <p>Über die Tabs <strong>Alle / UI / UX / A11y</strong> kann nach Kategorie gefiltert werden.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">6</div>
+                        <div class="help-step-content">
+                            <h3>Bericht kopieren oder weiterleiten</h3>
+                            <p>Nach den Tests erscheint im Bereich <strong>"Reports"</strong> automatisch ein Bericht. Einfach darauf klicken, dann auf <strong>"Kopieren"</strong> — der Bericht ist jetzt in der Zwischenablage und kann in eine E-Mail, ein Ticket oder ein Dokument eingefügt werden.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <details class="help-extra">
+                    <summary>Zusatzfunktionen</summary>
+                    <div class="help-extra-content">
+                        <h4>Discovery</h4>
+                        <p>Der Button <strong>"Discovery"</strong> erkennt automatisch die Chat-Elemente auf der Seite (Eingabefeld, Senden-Button, Nachrichten-Bereich). Das ist nur nötig, wenn die Tests die Chat-Elemente nicht finden können.</p>
+                        <h4>Jira-Integration</h4>
+                        <p>Unter <strong>"Jira-Integration (optional)"</strong> kann eine Verbindung zu Jira eingerichtet werden. Dann können fehlgeschlagene Tests direkt als Jira-Tickets erstellt werden — über den Button "Jira Tickets erstellen" der nach dem Testlauf erscheint.</p>
+                    </div>
+                </details>
+            </div>
+
+            <!-- ===== WEBSITE-TEST ===== -->
+            <div class="card help-card" id="help-website">
+                <h2>Website-Test</h2>
+                <p class="help-subtitle">Prüft eine beliebige Webseite auf technische Qualität, Barrierefreiheit und SEO.</p>
+
+                <div class="help-steps">
+                    <div class="help-step">
+                        <div class="help-step-number">1</div>
+                        <div class="help-step-content">
+                            <h3>Zur Website-Test-Ansicht wechseln</h3>
+                            <p>Oben auf den Tab <strong>"Website-Test"</strong> klicken.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">2</div>
+                        <div class="help-step-content">
+                            <h3>URL eingeben</h3>
+                            <p>Die Adresse der zu prüfenden Webseite im Feld <strong>"Website-URL"</strong> eingeben.</p>
+                            <div class="help-example">Beispiel: <code>https://www.europapark.de</code></div>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">3</div>
+                        <div class="help-step-content">
+                            <h3>Login-Daten eingeben (falls nötig)</h3>
+                            <p>Falls die Seite ein Login erfordert: Auf <strong>"Login-Credentials (optional)"</strong> klicken und die Daten eintragen.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">4</div>
+                        <div class="help-step-content">
+                            <h3>Prüfungen auswählen</h3>
+                            <p>Unter der URL werden fünf Kategorien als Checkboxen angezeigt. Alle sind standardmäßig aktiviert:</p>
+                            <ul class="help-list">
+                                <li><strong>Accessibility</strong> — Barrierefreiheit nach WCAG-Standard (z.B. Kontraste, Alternativtexte für Bilder)</li>
+                                <li><strong>Performance</strong> — Ladezeiten und Seitengröße</li>
+                                <li><strong>Broken Links</strong> — Findet kaputte Links, die ins Leere führen</li>
+                                <li><strong>Responsive</strong> — Prüft die Darstellung auf Handy, Tablet und Desktop</li>
+                                <li><strong>SEO</strong> — Suchmaschinenoptimierung (Titel, Beschreibung, Überschriften)</li>
+                            </ul>
+                            <div class="help-tip">Tipp: Für einen schnellen Check reicht es, nur eine oder zwei Kategorien auszuwählen. Für einen vollständigen Check alle aktiviert lassen.</div>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">5</div>
+                        <div class="help-step-content">
+                            <h3>Scan starten</h3>
+                            <p>Auf <strong>"Scan starten"</strong> klicken. Der Scan dauert je nach Seitengröße und Anzahl der Prüfungen ca. 30 Sekunden bis 2 Minuten.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">6</div>
+                        <div class="help-step-content">
+                            <h3>Ergebnisse ansehen</h3>
+                            <p>Die Ergebnisse erscheinen in einer Liste mit farbigen Status-Anzeigen:</p>
+                            <ul class="help-list">
+                                <li><span class="help-badge help-badge-pass">Bestanden</span> — Kein Problem gefunden</li>
+                                <li><span class="help-badge help-badge-fail">Fehler</span> — Problem das behoben werden sollte</li>
+                                <li><span class="help-badge help-badge-warn">Warnung</span> — Mögliches Problem, sollte geprüft werden</li>
+                                <li><span class="help-badge help-badge-info">Info</span> — Nur zur Information, kein Handlungsbedarf</li>
+                            </ul>
+                            <p>Über die Tabs kann nach Kategorie gefiltert werden.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">7</div>
+                        <div class="help-step-content">
+                            <h3>Bericht erstellen</h3>
+                            <p>Nach dem Scan erscheint der Button <strong>"Bericht anzeigen"</strong>. Dieser öffnet eine Zusammenfassung mit allen Ergebnissen, die über <strong>"Kopieren"</strong> in die Zwischenablage kopiert werden kann.</p>
+                            <p>Der Bericht ist auch später im Bereich <strong>"Reports"</strong> im Chatbot-Test-Tab verfuegbar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <details class="help-extra">
+                    <summary>Zusatzfunktionen</summary>
+                    <div class="help-extra-content">
+                        <h4>Seite analysieren</h4>
+                        <p>Der Button <strong>"Seite analysieren"</strong> erkennt automatisch Eingabefelder und Buttons auf der Seite (z.B. Cookie-Banner, Suchfelder). So können vor dem Scan Aktionen ausgeführt werden — zum Beispiel einen Cookie-Hinweis wegklicken oder ein Formular ausfüllen.</p>
+                    </div>
+                </details>
+            </div>
+
+            <!-- ===== BERICHTE ===== -->
+            <div class="card help-card" id="help-reports">
+                <h2>Berichte verstehen</h2>
+
+                <div class="help-steps">
+                    <div class="help-step">
+                        <div class="help-step-number">&#128196;</div>
+                        <div class="help-step-content">
+                            <h3>Wo finde ich die Berichte?</h3>
+                            <p>Alle Berichte werden automatisch nach jedem Test- oder Scan-Durchlauf erstellt. Sie sind im Bereich <strong>"Reports"</strong> auf der Chatbot-Test-Seite aufgelistet — mit Datum und Uhrzeit.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">&#128203;</div>
+                        <div class="help-step-content">
+                            <h3>Was steht im Bericht?</h3>
+                            <ul class="help-list">
+                                <li><strong>Zusammenfassung</strong> — Wie viele Tests bestanden oder fehlgeschlagen sind</li>
+                                <li><strong>Details pro Prüfpunkt</strong> — Jeder Test mit Status und Beschreibung</li>
+                                <li><strong>Handlungsbedarf</strong> — Konkrete Empfehlungen was behoben werden sollte</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="help-step">
+                        <div class="help-step-number">&#128233;</div>
+                        <div class="help-step-content">
+                            <h3>Bericht weiterleiten</h3>
+                            <p>Bericht anklicken, dann <strong>"Kopieren"</strong> drücken. Den Inhalt danach einfach per <strong>Strg+V</strong> (Windows) oder <strong>Cmd+V</strong> (Mac) in eine E-Mail, ein Word-Dokument oder ein Jira-Ticket einfügen.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== FAQ ===== -->
+            <div class="card help-card" id="help-faq">
+                <h2>Häufige Fragen</h2>
+
+                <details class="help-faq-item">
+                    <summary>Muss ich etwas installieren?</summary>
+                    <p>Nein. Das Tool läuft im Browser. Einfach die Adresse aufrufen und loslegen.</p>
+                </details>
+
+                <details class="help-faq-item">
+                    <summary>Wie lange dauert ein Test?</summary>
+                    <p>Ein Chatbot-Test dauert ca. 1–5 Minuten, ein Website-Scan ca. 30 Sekunden bis 2 Minuten — je nachdem wie viele Prüfungen ausgewählt sind.</p>
+                </details>
+
+                <details class="help-faq-item">
+                    <summary>Was bedeutet "Bestanden" und "Fehler"?</summary>
+                    <p><strong>Bestanden</strong> heißt: Die Prüfung war erfolgreich, es gibt kein Problem. <strong>Fehler</strong> heißt: Es wurde ein Problem gefunden, das behoben werden sollte. Im Bericht steht jeweils dabei, was genau nicht stimmt.</p>
+                </details>
+
+                <details class="help-faq-item">
+                    <summary>Kann ich den Test jederzeit abbrechen?</summary>
+                    <p>Ja. Während ein Test läuft, erscheint ein roter <strong>"Abbrechen"</strong>-Button. Ein Klick darauf stoppt den Testlauf sofort.</p>
+                </details>
+
+                <details class="help-faq-item">
+                    <summary>Was ist "Discovery"?</summary>
+                    <p>Discovery ist eine Hilfsfunktion für den Chatbot-Test. Sie erkennt automatisch die technischen Elemente des Chatbots auf der Seite (Eingabefeld, Senden-Button, etc.). Das ist nur nötig, wenn die Tests die Elemente nicht von alleine finden.</p>
+                </details>
+
+                <details class="help-faq-item">
+                    <summary>Werden meine Login-Daten gespeichert?</summary>
+                    <p>Login-Daten können freiwillig gespeichert werden (über den "Speichern"-Button). Sie werden lokal auf dem Server gespeichert und nicht an Dritte weitergegeben.</p>
+                </details>
+
+                <details class="help-faq-item">
+                    <summary>Was mache ich mit dem Bericht?</summary>
+                    <p>Den Bericht kopieren und an die zuständige Person weiterleiten (z.B. per E-Mail oder als Jira-Ticket). Der Bericht enthält alle Ergebnisse und konkrete Empfehlungen zur Behebung von Problemen.</p>
+                </details>
+            </div>
+        </section>
+
+        </div><!-- /mode-hilfe -->
+
     </main>
 
     <footer>

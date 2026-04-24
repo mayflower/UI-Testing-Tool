@@ -887,9 +887,16 @@ function switchMode(mode) {
     document.querySelectorAll(".mode-btn").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.mode === mode);
     });
-    document.getElementById("mode-chatbot").style.display = mode === "chatbot" ? "block" : "none";
-    document.getElementById("mode-website").style.display = mode === "website" ? "block" : "none";
+    ["chatbot", "website", "hilfe"].forEach(m => {
+        const el = document.getElementById("mode-" + m);
+        if (el) el.style.display = m === mode ? "block" : "none";
+    });
     localStorage.setItem("ep_test_mode", mode);
+}
+
+function scrollToHelp(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // Restore mode on load
