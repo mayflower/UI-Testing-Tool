@@ -786,7 +786,7 @@ def api_website_scan_detect():
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=HEADLESS, slow_mo=SLOW_MO)
             page = browser.new_page(viewport={"width": 1440, "height": 900}, locale="de-DE")
-            page.goto(url, wait_until="networkidle", timeout=15000)
+            page.goto(url, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(1000)
 
             elements = page.evaluate("""() => {
