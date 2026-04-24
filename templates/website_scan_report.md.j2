@@ -1,0 +1,71 @@
+# Website-Scan – Testbericht
+
+| Feld | Wert |
+|------|------|
+| **Datum** | {{ date }} |
+| **URL** | {{ url }} |
+| **Tester** | {{ tester }} |
+| **Checks** | {{ checks | join(", ") }} |
+
+---
+
+## Ergebnis-Zusammenfassung
+
+| Metrik | Anzahl |
+|--------|--------|
+| Pruefungen gesamt | {{ total }} |
+| Bestanden | {{ passed }} |
+| Fehlgeschlagen | {{ failed }} |
+| Warnungen | {{ warnings }} |
+| Info | {{ info }} |
+| **Bestehensquote** | **{{ pass_rate }}%** |
+
+{% if failed > 0 %}
+> **{{ failed }} Pruefung(en) fehlgeschlagen.** Siehe Abschnitt "Handlungsbedarf" fuer Details.
+{% elif passed == total %}
+> Alle {{ total }} Pruefungen bestanden.
+{% else %}
+> {{ passed }} von {{ total }} Pruefungen bestanden. {{ warnings }} Warnung(en).
+{% endif %}
+
+---
+
+{% for category, items in categories.items() %}
+## {{ category | title }}
+
+| Status | Pruefpunkt | Schweregrad | Details |
+|--------|------------|-------------|---------|
+{% for item in items %}
+| {% if item.status == "passed" %}Bestanden{% elif item.status == "failed" %}**FEHLER**{% elif item.status == "warning" %}Warnung{% else %}Info{% endif %} | {{ item.name }} | {{ item.severity }} | {{ item.details | truncate(120) }} |
+{% endfor %}
+
+---
+
+{% endfor %}
+{% if failed_items %}
+## Handlungsbedarf
+
+Die folgenden Punkte muessen bearbeitet werden:
+
+| Nr. | Kategorie | Pruefpunkt | Schweregrad | Details |
+|-----|-----------|------------|-------------|---------|
+{% for item in failed_items %}
+| {{ loop.index }} | {{ item.category | title }} | {{ item.name }} | **{{ item.severity }}** | {{ item.details | truncate(200) }} |
+{% endfor %}
+
+---
+
+{% endif %}
+{% if warning_items %}
+## Warnungen
+
+| Nr. | Kategorie | Pruefpunkt | Details |
+|-----|-----------|------------|---------|
+{% for item in warning_items %}
+| {{ loop.index }} | {{ item.category | title }} | {{ item.name }} | {{ item.details | truncate(200) }} |
+{% endfor %}
+
+---
+
+{% endif %}
+_Bericht generiert mit Website-Scanner_

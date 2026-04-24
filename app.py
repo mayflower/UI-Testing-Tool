@@ -685,6 +685,18 @@ def _run_website_scan_worker(
         scanner.run()
         run["results"] = scanner.results
         run["status"] = scanner.status
+        # Report generieren wenn erfolgreich
+        if scanner.results:
+            try:
+                from utils.report_generator import generate_website_scan_report
+                report_path = generate_website_scan_report(
+                    results=scanner.results,
+                    url=url,
+                    checks=checks,
+                )
+                run["report"] = report_path.name
+            except Exception:
+                pass
     except Exception as e:
         run["status"] = "error"
         run["error"] = str(e)
@@ -751,7 +763,7 @@ def api_website_scan_stream(run_id):
                 passed = sum(1 for r in results if r["status"] == "passed")
                 failed = sum(1 for r in results if r["status"] == "failed")
                 warnings = sum(1 for r in results if r["status"] == "warning")
-                yield f"data: {json.dumps({'type': 'done', 'data': {'status': run['status'], 'passed': passed, 'failed': failed, 'warnings': warnings, 'total': len(results)}})}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'data': {'status': run['status'], 'passed': passed, 'failed': failed, 'warnings': warnings, 'total': len(results), 'report': run.get('report')}})}\n\n"
                 break
 
             time.sleep(0.5)

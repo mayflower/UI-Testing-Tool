@@ -427,3 +427,58 @@ def generate_suite_report(
         f.write(content)
 
     return output_path
+
+
+def generate_website_scan_report(
+    results: list[dict],
+    url: str,
+    checks: list[str],
+) -> Path:
+    """Generiere einen Website-Scan-Bericht als Markdown."""
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    env = _get_jinja_env()
+    template = env.get_template("website_scan_report.md.j2")
+
+    total = len(results)
+    passed = sum(1 for r in results if r.get("status") == "passed")
+    failed = sum(1 for r in results if r.get("status") == "failed")
+    warnings = sum(1 for r in results if r.get("status") == "warning")
+    info = sum(1 for r in results if r.get("status") == "info")
+
+    # Nach Kategorie gruppieren
+    categories: dict[str, list] = {}
+    for r in results:
+        cat = r.get("category", "sonstige")
+        categories.setdefault(cat, []).append(r)
+
+    failed_items = [r for r in results if r.get("status") == "failed"]
+    warning_items = [r for r in results if r.get("status") == "warning"]
+
+    now = datetime.now()
+    # Domain fuer Dateinamen extrahieren
+    from urllib.parse import urlparse
+    domain = urlparse(url).hostname or "unknown"
+    domain = domain.replace(".", "_")
+
+    content = template.render(
+        date=now.strftime("%Y-%m-%d %H:%M"),
+        url=url,
+        tester=TESTER_NAME,
+        checks=checks,
+        total=total,
+        passed=passed,
+        failed=failed,
+        warnings=warnings,
+        info=info,
+        pass_rate=round(passed / total * 100) if total > 0 else 0,
+        categories=categories,
+        failed_items=failed_items,
+        warning_items=warning_items,
+    )
+
+    output_path = REPORTS_DIR / f"website_scan_{domain}_{now.strftime('%Y%m%d_%H%M%S')}.md"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    return output_path

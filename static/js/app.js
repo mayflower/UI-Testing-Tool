@@ -929,6 +929,8 @@ async function startWebsiteScan() {
     document.getElementById("scanResultsSummary").textContent = "";
     document.getElementById("btnStartScan").style.display = "none";
     document.getElementById("btnCancelScan").style.display = "inline-flex";
+    const reportBtn = document.getElementById("btnScanReport");
+    if (reportBtn) reportBtn.style.display = "none";
 
     // Clear previous results
     ["scanListAll", "scanListAccessibility", "scanListPerformance", "scanListLinks", "scanListResponsive", "scanListSeo"].forEach(id => {
@@ -1049,7 +1051,16 @@ function renderScanResult(r) {
 function onScanDone(data) {
     const summary = `${data.passed || 0} bestanden, ${data.failed || 0} fehlgeschlagen, ${data.warnings || 0} Warnungen`;
     document.getElementById("scanResultsSummary").textContent = summary;
+
+    // Report-Button anzeigen wenn Report generiert wurde
+    const reportBtn = document.getElementById("btnScanReport");
+    if (reportBtn && data.report) {
+        reportBtn.style.display = "inline-flex";
+        reportBtn.onclick = () => showReport(data.report);
+    }
+
     onScanFinished();
+    loadReports();
 }
 
 function onScanFinished() {
