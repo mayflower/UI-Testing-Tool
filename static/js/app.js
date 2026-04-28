@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
     loadReports();
     loadScreenshots();
     loadJiraConfig();
+    renderRunSparkline();
+    syncThemeToggleState();
 
     // Enter-Taste im URL-Feld startet Tests
     document.getElementById("urlInput").addEventListener("keydown", (e) => {
@@ -265,8 +267,7 @@ async function runTests() {
     btn.disabled = true;
     btn.textContent = "Laeuft...";
     document.getElementById("btnCancel").style.display = "";
-    document.getElementById("connectionStatus").innerHTML =
-        '<span class="status-dot running"></span> Tests laufen...';
+    setConnectionStatus("running");
 
     // Ergebnisse zuruecksetzen
     clearResults();
@@ -460,10 +461,7 @@ async function onTestsCompleted(data) {
     cancelBtn.textContent = "Abbrechen";
 
     const cancelled = data.status === "cancelled";
-    document.getElementById("connectionStatus").innerHTML =
-        cancelled
-            ? '<span class="status-dot"></span> Abgebrochen'
-            : '<span class="status-dot"></span> Bereit';
+    setConnectionStatus(cancelled ? "cancelled" : "idle");
 
     const fill = document.getElementById("progressFill");
     fill.className = "progress-fill";
@@ -472,6 +470,11 @@ async function onTestsCompleted(data) {
     const total = (data.passed || 0) + (data.failed || 0) + (data.skipped || 0);
     const pct = total > 0 ? Math.round(((data.passed || 0) / total) * 100) : 0;
     document.getElementById("lastRunStatus").textContent = `${pct}% bestanden`;
+
+    if (!cancelled && total > 0) {
+        addRunToHistory({ pct: pct, passed: data.passed || 0, failed: data.failed || 0, total: total });
+    }
+    renderRunSparkline();
 
     stopLiveBrowser();
 
@@ -530,6 +533,7 @@ async function runDiscovery() {
     resultsEl.innerHTML = "";
 
     document.getElementById("btnDiscover").disabled = true;
+    setConnectionStatus("discovering");
 
     try {
         const creds = getCredentials();
@@ -592,6 +596,7 @@ async function runDiscovery() {
         statusEl.textContent = `Fehler: ${e.message}`;
     } finally {
         document.getElementById("btnDiscover").disabled = false;
+        setConnectionStatus("idle");
     }
 }
 
@@ -667,13 +672,20 @@ async function loadScreenshots() {
     container.innerHTML = shots
         .map(
             (s) => `
-            <div class="screenshot-thumb" onclick="window.open('${s.path}?t=${cacheBuster}', '_blank')">
+            <div class="screenshot-thumb" draggable="true" data-name="${escapeAttr(s.name)}" onclick="openScreenshot(event, '${s.path}?t=${cacheBuster}')">
                 <img src="${s.path}?t=${cacheBuster}" alt="${escapeHtml(s.name)}" loading="lazy">
                 <div class="name">${escapeHtml(s.name)}</div>
             </div>
         `
         )
         .join("");
+    applyScreenshotOrder(container);
+    setupScreenshotDragDrop(container);
+}
+
+function openScreenshot(e, url) {
+    if (e && e.target && e.target.closest(".screenshot-thumb")?.classList.contains("dragging")) return;
+    window.open(url, "_blank");
 }
 
 // ========== Modal ==========
@@ -936,6 +948,7 @@ async function startWebsiteScan() {
     document.getElementById("scanResultsSummary").textContent = "";
     document.getElementById("btnStartScan").style.display = "none";
     document.getElementById("btnCancelScan").style.display = "inline-flex";
+    setConnectionStatus("scanning");
     const reportBtn = document.getElementById("btnScanReport");
     if (reportBtn) reportBtn.style.display = "none";
 
@@ -1043,11 +1056,12 @@ function renderScanResult(r) {
         extra += ` <a href="${escapeHtml(r.help_url)}" target="_blank" rel="noopener" style="font-size:0.8rem;">Mehr Info</a>`;
     }
 
+    const sevTip = severityTooltip(r.severity);
     return `<div class="test-item ${cls}">
         <span class="test-icon">${icon}</span>
         <div class="test-info">
             <span class="test-name">${escapeHtml(r.name)}</span>
-            <span class="severity-badge ${r.severity}">${escapeHtml(r.severity)}</span>
+            <span class="severity-badge ${r.severity}" data-tooltip="${escapeAttr(sevTip)}" tabindex="0">${escapeHtml(r.severity)}</span>
             <div class="test-details" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.2rem;">${escapeHtml(r.details)}</div>
             ${extra}
         </div>
@@ -1074,6 +1088,7 @@ function onScanFinished() {
     document.getElementById("scanProgressBar").style.display = "none";
     document.getElementById("btnStartScan").style.display = "inline-flex";
     document.getElementById("btnCancelScan").style.display = "none";
+    setConnectionStatus("idle");
 }
 
 async function cancelWebsiteScan() {
@@ -1126,6 +1141,7 @@ async function detectPageElements() {
     const btn = document.getElementById("btnDetect");
     btn.disabled = true;
     btn.textContent = "Analysiere...";
+    setConnectionStatus("discovering");
 
     try {
         const resp = await fetch("/api/website-scan/detect", {
@@ -1142,6 +1158,7 @@ async function detectPageElements() {
     } finally {
         btn.disabled = false;
         btn.textContent = "Seite analysieren";
+        setConnectionStatus("idle");
     }
 }
 
@@ -1201,4 +1218,196 @@ function escapeHtml(str) {
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+}
+
+// ========== Theme-Toggle (Dark Mode) ==========
+
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("ep_theme", next); } catch (e) {}
+    syncThemeToggleState();
+}
+
+function syncThemeToggleState() {
+    const btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    btn.setAttribute("aria-pressed", String(isDark));
+    btn.title = isDark ? "Zum hellen Modus wechseln" : "Zum dunklen Modus wechseln";
+}
+
+// ========== Connection-Status ==========
+
+function setConnectionStatus(state, customLabel) {
+    const states = {
+        idle:        { cls: "idle",        text: "Bereit" },
+        running:     { cls: "running",     text: "Tests laufen..." },
+        discovering: { cls: "discovering", text: "Discovery läuft..." },
+        scanning:    { cls: "scanning",    text: "Scan läuft..." },
+        error:       { cls: "error",       text: "Fehler" },
+        cancelled:   { cls: "cancelled",   text: "Abgebrochen" },
+        success:     { cls: "success",     text: "Bereit" },
+    };
+    const s = states[state] || states.idle;
+    const label = customLabel || s.text;
+    const el = document.getElementById("connectionStatus");
+    if (!el) return;
+    el.innerHTML = `<span class="status-dot ${s.cls}"></span> ${escapeHtml(label)}`;
+}
+
+// ========== Severity-Tooltips ==========
+
+function severityTooltip(severity) {
+    const tips = {
+        critical: "Kritisch — muss sofort behoben werden, blockiert Nutzer.",
+        serious:  "Schwerwiegend — beeinträchtigt viele Nutzer, hohe Priorität.",
+        moderate: "Mittel — Verbesserung empfohlen, kein direkter Blocker.",
+        minor:    "Gering — kosmetisch oder Edge-Case, niedrige Priorität.",
+        info:     "Info — Hinweis ohne Bewertung.",
+        warning:  "Warnung — auffällig, kein Fehler.",
+    };
+    return tips[severity] || "";
+}
+
+// ========== Run-History + Sparkline ==========
+
+const HISTORY_KEY = "ep_test_history";
+const HISTORY_MAX = 5;
+
+function getRunHistory() {
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+}
+
+function addRunToHistory(run) {
+    const list = getRunHistory();
+    list.push({ pct: run.pct, passed: run.passed, failed: run.failed, total: run.total, ts: Date.now() });
+    while (list.length > HISTORY_MAX) list.shift();
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+function renderRunSparkline() {
+    const card = document.getElementById("cardLastRun");
+    if (!card) return;
+    let svg = card.querySelector(".stat-sparkline");
+    let empty = card.querySelector(".stat-sparkline-empty");
+    const history = getRunHistory();
+
+    if (history.length < 2) {
+        if (svg) svg.remove();
+        if (!empty) {
+            empty = document.createElement("span");
+            empty.className = "stat-sparkline-empty";
+            empty.textContent = "Trend ab 2 Läufen";
+            card.appendChild(empty);
+        }
+        return;
+    }
+    if (empty) empty.remove();
+
+    const w = 80, h = 28, pad = 2;
+    const pcts = history.map(r => r.pct);
+    const min = Math.min(...pcts, 0);
+    const max = Math.max(...pcts, 100);
+    const range = max - min || 1;
+    const stepX = (w - pad * 2) / (pcts.length - 1);
+    const points = pcts.map((p, i) => {
+        const x = pad + i * stepX;
+        const y = h - pad - ((p - min) / range) * (h - pad * 2);
+        return [x, y];
+    });
+    const linePath = points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+    const areaPath = `${linePath} L${points[points.length-1][0].toFixed(1)} ${h - pad} L${points[0][0].toFixed(1)} ${h - pad} Z`;
+    const last = points[points.length - 1];
+
+    if (!svg) {
+        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "stat-sparkline");
+        svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+        svg.setAttribute("aria-label", "Trend der letzten Testläufe");
+        card.appendChild(svg);
+    }
+    svg.innerHTML = `
+        <path class="area" d="${areaPath}"></path>
+        <path class="line" d="${linePath}"></path>
+        <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.5"></circle>
+    `;
+    svg.setAttribute("title", history.map(r => `${r.pct}%`).join(" → "));
+}
+
+// ========== Screenshot Drag&Drop ==========
+
+const SCREENSHOT_ORDER_KEY = "ep_screenshot_order";
+
+function getScreenshotOrder() {
+    try {
+        const raw = localStorage.getItem(SCREENSHOT_ORDER_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+}
+
+function saveScreenshotOrder(grid) {
+    const names = Array.from(grid.querySelectorAll(".screenshot-thumb")).map(t => t.dataset.name);
+    try { localStorage.setItem(SCREENSHOT_ORDER_KEY, JSON.stringify(names)); } catch (e) {}
+}
+
+function applyScreenshotOrder(grid) {
+    const order = getScreenshotOrder();
+    if (!order.length) return;
+    const thumbs = Array.from(grid.querySelectorAll(".screenshot-thumb"));
+    thumbs.sort((a, b) => {
+        const ia = order.indexOf(a.dataset.name);
+        const ib = order.indexOf(b.dataset.name);
+        if (ia === -1 && ib === -1) return 0;
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+    });
+    thumbs.forEach(t => grid.appendChild(t));
+}
+
+let dragSrc = null;
+
+function setupScreenshotDragDrop(grid) {
+    const thumbs = grid.querySelectorAll(".screenshot-thumb");
+    thumbs.forEach(t => {
+        t.addEventListener("dragstart", (e) => {
+            dragSrc = t;
+            t.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+            try { e.dataTransfer.setData("text/plain", t.dataset.name || ""); } catch (err) {}
+        });
+        t.addEventListener("dragend", () => {
+            t.classList.remove("dragging");
+            grid.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+            dragSrc = null;
+        });
+        t.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            if (dragSrc && dragSrc !== t) t.classList.add("drag-over");
+        });
+        t.addEventListener("dragleave", () => {
+            t.classList.remove("drag-over");
+        });
+        t.addEventListener("drop", (e) => {
+            e.preventDefault();
+            t.classList.remove("drag-over");
+            if (!dragSrc || dragSrc === t) return;
+            const all = Array.from(grid.children);
+            const srcIdx = all.indexOf(dragSrc);
+            const tgtIdx = all.indexOf(t);
+            if (srcIdx < tgtIdx) t.after(dragSrc);
+            else t.before(dragSrc);
+            saveScreenshotOrder(grid);
+        });
+    });
 }
