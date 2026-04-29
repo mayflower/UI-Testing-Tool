@@ -1290,12 +1290,12 @@ function setConnectionStatus(state, customLabel) {
 
 function severityTooltip(severity) {
     const tips = {
-        critical: "Kritisch — muss sofort behoben werden, blockiert Nutzer.",
-        serious:  "Schwerwiegend — beeinträchtigt viele Nutzer, hohe Priorität.",
-        moderate: "Mittel — Verbesserung empfohlen, kein direkter Blocker.",
-        minor:    "Gering — kosmetisch oder Edge-Case, niedrige Priorität.",
-        info:     "Info — Hinweis ohne Bewertung.",
-        warning:  "Warnung — auffällig, kein Fehler.",
+        critical: "Kritisch — blockiert Nutzer komplett, sofort beheben.\nz.B. fehlender Alt-Text bei funktionalen Bildern, Tastaturfalle, Seite lädt nicht.",
+        serious:  "Schwerwiegend — beeinträchtigt viele Nutzer, hohe Priorität.\nz.B. fehlendes Form-Label, broken Link, kein H1, fehlender <title>, fehlender Login-Button.",
+        moderate: "Mittel — Verbesserung empfohlen, kein direkter Blocker.\nz.B. unklare Linktexte, niedriger Kontrast, fehlende Meta-Description, horizontaler Overflow.",
+        minor:    "Gering — kosmetisch oder Edge-Case, niedrige Priorität.\nz.B. unbenötigtes ARIA-Attribut, Performance-Wert nicht messbar.",
+        info:     "Info — Hinweis ohne Bewertung, kein Handlungsbedarf.\nz.B. Anzahl Links auf der Seite, gefundene Open-Graph-Tags, Heading-Struktur.",
+        warning:  "Warnung — auffällig, aber kein harter Fehler.\nz.B. langsame Ladezeit, kleine SEO-Optimierung möglich, Pre-Action-Fehler.",
     };
     return tips[severity] || "";
 }
