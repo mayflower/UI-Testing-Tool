@@ -7,6 +7,27 @@ let eventSource = null;
 let savedEnvironments = {};
 let editingEnvName = null;
 
+// SVG-Icons (Feather/Lucide-Stil, currentColor)
+const ICON_EDIT = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>';
+const ICON_TRASH = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path></svg>';
+const ICON_CHECK = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+const ICON_X = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+const ICON_WARNING = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+const ICON_INFO = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+
+// Button-Loading-Helper
+function setBtnLoading(btnOrId, loading) {
+    const btn = typeof btnOrId === "string" ? document.getElementById(btnOrId) : btnOrId;
+    if (!btn) return;
+    if (loading) {
+        btn.classList.add("is-loading");
+        btn.disabled = true;
+    } else {
+        btn.classList.remove("is-loading");
+        btn.disabled = false;
+    }
+}
+
 // ========== Initialisierung ==========
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -115,8 +136,8 @@ async function loadEnvironments() {
                         <span class="env-chip-name">${escapeHtml(name)}${hasLogin}</span>
                         <span class="env-chip-desc">${escapeHtml(env.url)}${desc}</span>
                     </button>
-                    <button class="env-chip-action env-chip-edit" onclick="editEnvironment('${escapeHtml(name)}')" title="Bearbeiten">&#9998;</button>
-                    <button class="env-chip-action env-chip-delete" onclick="deleteEnvironment('${escapeHtml(name)}')" title="Entfernen">&times;</button>
+                    <button class="env-chip-action env-chip-edit" onclick="editEnvironment('${escapeHtml(name)}')" title="Bearbeiten" aria-label="Bearbeiten">${ICON_EDIT}</button>
+                    <button class="env-chip-action env-chip-delete" onclick="deleteEnvironment('${escapeHtml(name)}')" title="Entfernen" aria-label="Entfernen">${ICON_TRASH}</button>
                 </div>
             `;
         })
@@ -263,9 +284,7 @@ async function runTests() {
     }
 
     // UI-Status aktualisieren
-    const btn = document.getElementById("btnRunTests");
-    btn.disabled = true;
-    btn.textContent = "Laeuft...";
+    setBtnLoading("btnRunTests", true);
     document.getElementById("btnCancel").style.display = "";
     setConnectionStatus("running");
 
@@ -379,8 +398,7 @@ async function pollStatus(runId) {
         }
 
         if (status.output) {
-            document.getElementById("consoleOutput").textContent =
-                status.output.join("\n");
+            renderConsoleOutput(status.output);
         }
 
         if (status.status === "completed" || status.status === "error") {
@@ -451,9 +469,7 @@ function updateSummary() {
 }
 
 async function onTestsCompleted(data) {
-    const btn = document.getElementById("btnRunTests");
-    btn.disabled = false;
-    btn.textContent = "Tests starten";
+    setBtnLoading("btnRunTests", false);
 
     const cancelBtn = document.getElementById("btnCancel");
     cancelBtn.style.display = "none";
@@ -508,9 +524,26 @@ function switchTab(tabName) {
 async function loadConsoleOutput(runId) {
     const status = await api(`/api/tests/status/${runId}`);
     if (status.output) {
-        document.getElementById("consoleOutput").textContent =
-            status.output.join("\n");
+        renderConsoleOutput(status.output);
     }
+}
+
+// Konsole zeilenweise mit Severity-Klassen rendern
+function classifyConsoleLine(line) {
+    if (/\b(error|fail(ed)?|exception|traceback|assert(ionerror)?)\b|\bE \b|✗/i.test(line)) return "error";
+    if (/\b(warn(ing)?|deprecat)/i.test(line)) return "warn";
+    if (/\b(passed|ok|success)\b|✓/i.test(line)) return "success";
+    return "info";
+}
+
+function renderConsoleOutput(lines) {
+    const out = document.getElementById("consoleOutput");
+    if (!out) return;
+    out.innerHTML = lines.map(line => {
+        const cls = classifyConsoleLine(line);
+        return `<span class="console-line-${cls}">${escapeHtml(line)}</span>`;
+    }).join("\n");
+    out.scrollTop = out.scrollHeight;
 }
 
 // ========== Discovery ==========
@@ -532,7 +565,7 @@ async function runDiscovery() {
     statusEl.textContent = "Discovery wird durchgefuehrt...";
     resultsEl.innerHTML = "";
 
-    document.getElementById("btnDiscover").disabled = true;
+    setBtnLoading("btnDiscover", true);
     setConnectionStatus("discovering");
 
     try {
@@ -572,7 +605,7 @@ async function runDiscovery() {
         // DOM-Inspektion anzeigen falls vorhanden
         const domInfo = (data.details || {})._dom_inspection;
         if (domInfo && domInfo.length > 0) {
-            html += `<div class="discovery-item" style="margin-top:0.75rem;"><span class="label" style="font-weight:600;">DOM-Inspektion (Nachrichten-Container)</span></div>`;
+            html += `<div class="discovery-item dom-heading"><span class="label label-strong">DOM-Inspektion (Nachrichten-Container)</span></div>`;
             domInfo.forEach((el, i) => {
                 const attrs = Object.entries(el.attrs || {})
                     .filter(([k]) => k !== "class")
@@ -583,7 +616,7 @@ async function runDiscovery() {
                 html += `
                     <div class="discovery-item">
                         <span class="label">[${i}]</span>
-                        <span class="value" style="font-family:monospace;font-size:0.75rem;">${info}${text}</span>
+                        <span class="value value-mono">${info}${text}</span>
                     </div>
                 `;
             });
@@ -595,7 +628,7 @@ async function runDiscovery() {
     } catch (e) {
         statusEl.textContent = `Fehler: ${e.message}`;
     } finally {
-        document.getElementById("btnDiscover").disabled = false;
+        setBtnLoading("btnDiscover", false);
         setConnectionStatus("idle");
     }
 }
@@ -749,8 +782,7 @@ async function saveJiraConfig() {
 
 async function testJiraConnection() {
     const status = document.getElementById("jiraStatus");
-    const btn = document.getElementById("btnJiraTest");
-    btn.disabled = true;
+    setBtnLoading("btnJiraTest", true);
     status.textContent = "Verbindung wird getestet...";
     status.style.color = "var(--text-muted)";
 
@@ -765,7 +797,7 @@ async function testJiraConnection() {
         status.textContent = `Fehler: ${result.error}`;
         status.style.color = "var(--danger)";
     }
-    btn.disabled = false;
+    setBtnLoading("btnJiraTest", false);
 }
 
 function openJiraExportModal() {
@@ -780,18 +812,18 @@ function openJiraExportModal() {
 
     summaryEl.innerHTML = count === 0
         ? "Keine fehlgeschlagenen Tests gefunden."
-        : `<label style="cursor:pointer;user-select:none;"><input type="checkbox" id="jiraSelectAll" checked onchange="toggleJiraSelectAll()" style="margin-right:0.4rem;">Alle ${count} auswaehlen</label>`;
+        : `<label class="jira-select-all"><input type="checkbox" id="jiraSelectAll" checked onchange="toggleJiraSelectAll()">Alle ${count} auswaehlen</label>`;
 
     listEl.innerHTML = Array.from(failedItems).map((item, i) => {
         const name = item.querySelector(".name")?.textContent || "";
         const suite = item.querySelector(".suite-tag")?.textContent || "";
-        return `<label style="display:flex;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;cursor:pointer;gap:0.4rem;">
+        return `<label class="jira-export-row">
             <input type="checkbox" class="jira-test-cb" data-index="${i}" checked>
-            <span style="color:var(--danger);">&#10007;</span>
-            <span style="flex:1;">${escapeHtml(name)}</span>
+            <span class="jira-icon-fail">${ICON_X}</span>
+            <span class="jira-export-name">${escapeHtml(name)}</span>
             <span class="suite-tag ${suite.toLowerCase()}">${escapeHtml(suite)}</span>
         </label>`;
-    }).join("") || '<p style="color:var(--text-muted);font-size:0.85rem;">Keine fehlgeschlagenen Tests.</p>';
+    }).join("") || '<p class="jira-export-empty">Keine fehlgeschlagenen Tests.</p>';
 
     updateJiraCreateBtn();
     statusEl.textContent = "";
@@ -845,8 +877,7 @@ async function createJiraTickets() {
     if (selectedNames.length === 0) return;
 
     const statusEl = document.getElementById("jiraExportStatus");
-    const btn = document.getElementById("btnJiraCreate");
-    btn.disabled = true;
+    setBtnLoading("btnJiraCreate", true);
     statusEl.style.color = "var(--text-muted)";
     statusEl.textContent = `${selectedNames.length} Ticket${selectedNames.length === 1 ? " wird" : "s werden"} erstellt...`;
 
@@ -868,7 +899,7 @@ async function createJiraTickets() {
     if (!result.ok) {
         statusEl.textContent = `Fehler: ${result.error}`;
         statusEl.style.color = "var(--danger)";
-        btn.disabled = false;
+        setBtnLoading("btnJiraCreate", false);
         return;
     }
 
@@ -879,18 +910,19 @@ async function createJiraTickets() {
     let html = "";
     if (succeeded.length > 0) {
         html += succeeded.map(t =>
-            `<div>&#10003; <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.key)}</a> — ${escapeHtml(t.test_name)}</div>`
+            `<div><span class="jira-icon-ok">${ICON_CHECK}</span> <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.key)}</a> — ${escapeHtml(t.test_name)}</div>`
         ).join("");
     }
     if (failed.length > 0) {
         html += failed.map(t =>
-            `<div style="color:var(--danger);">&#10007; ${escapeHtml(t.test_name)}: ${escapeHtml(t.error)}</div>`
+            `<div class="jira-icon-fail">${ICON_X} ${escapeHtml(t.test_name)}: ${escapeHtml(t.error)}</div>`
         ).join("");
     }
 
     document.getElementById("jiraExportList").innerHTML = html || "Keine Tickets erstellt.";
     statusEl.textContent = `${succeeded.length} Ticket${succeeded.length === 1 ? "" : "s"} erstellt${failed.length > 0 ? `, ${failed.length} fehlgeschlagen` : ""}.`;
     statusEl.style.color = failed.length > 0 ? "var(--warning)" : "var(--success)";
+    setBtnLoading("btnJiraCreate", false);
 }
 
 // ========== Mode-Switcher ==========
@@ -1043,9 +1075,9 @@ function addScanResult(result) {
 }
 
 function renderScanResult(r) {
-    const icons = {passed: "&#10003;", failed: "&#10007;", warning: "&#9888;", info: "&#8505;"};
+    const icons = {passed: ICON_CHECK, failed: ICON_X, warning: ICON_WARNING, info: ICON_INFO};
     const classes = {passed: "passed", failed: "failed", warning: "warning", info: "info"};
-    const icon = icons[r.status] || "&#8226;";
+    const icon = icons[r.status] || "•";
     const cls = classes[r.status] || "";
 
     let extra = "";
@@ -1053,7 +1085,7 @@ function renderScanResult(r) {
         extra = `<div class="scan-screenshot"><img src="${escapeHtml(r.screenshot)}" alt="${escapeHtml(r.viewport || '')}" onclick="window.open(this.src)"></div>`;
     }
     if (r.help_url) {
-        extra += ` <a href="${escapeHtml(r.help_url)}" target="_blank" rel="noopener" style="font-size:0.8rem;">Mehr Info</a>`;
+        extra += ` <a href="${escapeHtml(r.help_url)}" target="_blank" rel="noopener" class="help-link">Mehr Info</a>`;
     }
 
     const sevTip = severityTooltip(r.severity);
@@ -1062,7 +1094,7 @@ function renderScanResult(r) {
         <div class="test-info">
             <span class="test-name">${escapeHtml(r.name)}</span>
             <span class="severity-badge ${r.severity}" data-tooltip="${escapeAttr(sevTip)}" tabindex="0">${escapeHtml(r.severity)}</span>
-            <div class="test-details" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.2rem;">${escapeHtml(r.details)}</div>
+            <div class="test-details">${escapeHtml(r.details)}</div>
             ${extra}
         </div>
         <span class="test-tag">${escapeHtml(r.category)}</span>
@@ -1138,9 +1170,7 @@ async function detectPageElements() {
     const url = document.getElementById("scanUrlInput").value.trim();
     if (!url) { alert("Bitte zuerst eine URL eingeben."); return; }
 
-    const btn = document.getElementById("btnDetect");
-    btn.disabled = true;
-    btn.textContent = "Analysiere...";
+    setBtnLoading("btnDetect", true);
     setConnectionStatus("discovering");
 
     try {
@@ -1156,8 +1186,7 @@ async function detectPageElements() {
     } catch (e) {
         alert("Fehler: " + e.message);
     } finally {
-        btn.disabled = false;
-        btn.textContent = "Seite analysieren";
+        setBtnLoading("btnDetect", false);
         setConnectionStatus("idle");
     }
 }
@@ -1173,7 +1202,7 @@ function renderDetectedForm(data) {
     const buttons = data.buttons || [];
 
     if (inputs.length === 0 && buttons.length === 0) {
-        fieldsContainer.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Keine interaktiven Elemente gefunden.</p>';
+        fieldsContainer.innerHTML = '<p class="detected-empty">Keine interaktiven Elemente gefunden.</p>';
         section.style.display = "block";
         return;
     }

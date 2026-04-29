@@ -478,6 +478,20 @@ select:focus {
 .test-item.failed .icon { color: var(--error); }
 .test-item.skipped .icon { color: var(--text-muted); }
 
+.test-icon {
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.test-item.passed  .test-icon { color: var(--success); }
+.test-item.failed  .test-icon { color: var(--error); }
+.test-item.warning .test-icon { color: var(--warning); }
+.test-item.info    .test-icon { color: var(--primary); }
+
 /* Console Output */
 .console-output {
     background: var(--console-bg);
@@ -1404,6 +1418,236 @@ body, header, .card, .console-output, select, .url-input, .text-input, .btn-seco
     font-size: 0.75rem;
     color: var(--text-muted);
     font-style: italic;
+}
+
+/* ========== Spacing Utilities ========== */
+
+.mt-sm { margin-top: 0.5rem; }
+.mt-md { margin-top: 0.75rem; }
+.mt-lg { margin-top: 1rem; }
+.mt-xl { margin-top: 1.25rem; }
+
+.mb-0  { margin-bottom: 0; }
+.mb-sm { margin-bottom: 0.5rem; }
+.mb-md { margin-bottom: 0.75rem; }
+.mb-lg { margin-bottom: 1rem; }
+
+.form-row.aligned-end { align-items: flex-end; }
+.form-group.no-margin { margin-bottom: 0; }
+
+.text-uppercase { text-transform: uppercase; }
+
+/* ========== Live Browser ========== */
+
+.live-browser-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.live-browser-img {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    display: block;
+}
+
+/* ========== Pre-Actions / Website-Mode ========== */
+
+.preactions-section {
+    margin-top: 1.25rem;
+}
+
+.preactions-section h2 {
+    margin-bottom: 0.75rem;
+}
+
+.preactions-section h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.preactions-section h3.spaced {
+    margin: 0.75rem 0 0.5rem;
+}
+
+.scan-checks {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* ========== Jira ========== */
+
+.jira-status {
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
+    color: var(--text-muted);
+}
+
+.jira-export-summary {
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.jira-export-list {
+    margin-bottom: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.jira-export-status {
+    font-size: 0.85rem;
+    min-height: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.jira-export-row {
+    display: flex;
+    align-items: center;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    cursor: pointer;
+    gap: 0.4rem;
+}
+
+.jira-export-row .jira-export-name {
+    flex: 1;
+}
+
+.jira-select-all {
+    cursor: pointer;
+    user-select: none;
+}
+
+.jira-select-all input {
+    margin-right: 0.4rem;
+}
+
+.jira-export-empty {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.jira-icon-fail { color: var(--danger); }
+.jira-icon-ok { color: var(--success); }
+
+.test-details {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.help-link {
+    font-size: 0.8rem;
+}
+
+/* ========== Card Layout Helpers ========== */
+
+.card-full-width {
+    grid-column: 1 / -1;
+}
+
+/* ========== Detected Form Empty State ========== */
+
+.detected-empty {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* ========== Discovery Item DOM-Inspection ========== */
+
+.discovery-item.dom-heading {
+    margin-top: 0.75rem;
+}
+
+.discovery-item .label-strong {
+    font-weight: 600;
+}
+
+.discovery-item .value-mono {
+    font-family: monospace;
+    font-size: 0.75rem;
+}
+
+/* ========== Button Loading-State (Spinner) ========== */
+
+@keyframes btn-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.btn.is-loading {
+    position: relative;
+    color: transparent !important;
+    cursor: wait !important;
+    pointer-events: none;
+}
+
+.btn.is-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: btn-spin 0.6s linear infinite;
+}
+
+.btn-secondary.is-loading::after {
+    border-color: rgba(0, 0, 0, 0.15);
+    border-top-color: var(--text);
+}
+
+[data-theme="dark"] .btn-secondary.is-loading::after {
+    border-color: rgba(255, 255, 255, 0.15);
+    border-top-color: var(--text);
+}
+
+/* ========== Console-Output Coloring ========== */
+
+.console-line-error   { color: #ef9a9a; }
+.console-line-warn    { color: #ffcc80; }
+.console-line-success { color: #a5d6a7; }
+.console-line-info    { color: inherit; }
+
+[data-theme="dark"] .console-line-error   { color: #ef5350; }
+[data-theme="dark"] .console-line-warn    { color: #ffa726; }
+[data-theme="dark"] .console-line-success { color: #66bb6a; }
+
+/* ========== Icon Sizing ========== */
+
+.icon-svg {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+    fill: currentColor;
+}
+
+.stat-icon .icon-svg {
+    width: 2rem;
+    height: 2rem;
+}
+
+.help-step-number .icon-svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #fff;
+}
+
+.env-chip-action .icon-svg {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-close .icon-svg {
+    width: 1.25rem;
+    height: 1.25rem;
 }
 
 /* ========== Drag&Drop Screenshots ========== */

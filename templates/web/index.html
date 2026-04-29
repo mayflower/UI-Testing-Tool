@@ -66,7 +66,7 @@
                 <details class="login-section" id="loginSection">
                     <summary class="login-toggle">Login-Credentials (optional)</summary>
                     <div class="login-fields">
-                        <div class="form-row" style="margin-top: 0.75rem;">
+                        <div class="form-row mt-md">
                             <div class="form-group">
                                 <label for="loginUrlInput">Login-URL</label>
                                 <input type="url" id="loginUrlInput" class="text-input"
@@ -74,7 +74,7 @@
                                        spellcheck="false">
                             </div>
                         </div>
-                        <div class="form-row" style="margin-top: 0.5rem;">
+                        <div class="form-row mt-sm">
                             <div class="form-group">
                                 <label for="usernameInput">Benutzername</label>
                                 <input type="text" id="usernameInput" class="text-input"
@@ -98,7 +98,7 @@
                 <details class="login-section" id="jiraSection">
                     <summary class="login-toggle">Jira-Integration (optional)</summary>
                     <div class="login-fields">
-                        <div class="form-row" style="margin-top: 0.75rem;">
+                        <div class="form-row mt-md">
                             <div class="form-group">
                                 <label for="jiraBaseUrl">Jira-URL</label>
                                 <input type="url" id="jiraBaseUrl" class="text-input"
@@ -111,7 +111,7 @@
                                        placeholder="user@company.com">
                             </div>
                         </div>
-                        <div class="form-row" style="margin-top: 0.5rem;">
+                        <div class="form-row mt-sm">
                             <div class="form-group">
                                 <label for="jiraApiToken">API-Token</label>
                                 <input type="password" id="jiraApiToken" class="text-input"
@@ -119,26 +119,26 @@
                             </div>
                             <div class="form-group">
                                 <label for="jiraProjectKey">Projektschluessel</label>
-                                <input type="text" id="jiraProjectKey" class="text-input"
-                                       placeholder="z.B. PROJ" style="text-transform:uppercase;">
+                                <input type="text" id="jiraProjectKey" class="text-input text-uppercase"
+                                       placeholder="z.B. PROJ">
                             </div>
                         </div>
-                        <div class="form-row" style="margin-top: 0.5rem; align-items: flex-end;">
+                        <div class="form-row mt-sm aligned-end">
                             <div class="form-group">
                                 <label for="jiraIssueType">Tickettyp</label>
                                 <input type="text" id="jiraIssueType" class="text-input"
                                        placeholder="Bug" value="Bug">
                             </div>
-                            <div class="form-group form-actions" style="margin-bottom: 0;">
+                            <div class="form-group form-actions no-margin">
                                 <button class="btn btn-small btn-secondary" onclick="saveJiraConfig()">Speichern</button>
                                 <button class="btn btn-small btn-secondary" onclick="testJiraConnection()" id="btnJiraTest">Verbindung testen</button>
                             </div>
                         </div>
-                        <p id="jiraStatus" style="font-size:0.8rem;margin-top:0.4rem;color:var(--text-muted);"></p>
+                        <p id="jiraStatus" class="jira-status"></p>
                     </div>
                 </details>
 
-                <div class="form-row" style="margin-top: 1rem;">
+                <div class="form-row mt-lg">
                     <div class="form-group">
                         <label for="suiteSelect">Testsuite</label>
                         <select id="suiteSelect">
@@ -166,21 +166,37 @@
         <!-- Status-Karten -->
         <section class="status-cards">
             <div class="card stat-card" id="cardSelectors">
-                <div class="stat-icon">&#9881;</div>
+                <div class="stat-icon" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="selectorCount">-/-</div>
                     <div class="stat-label">Selektoren konfiguriert</div>
                 </div>
             </div>
             <div class="card stat-card" id="cardUrl">
-                <div class="stat-icon">&#127760;</div>
+                <div class="stat-icon" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="envCount">-</div>
                     <div class="stat-label">Gespeicherte URLs</div>
                 </div>
             </div>
             <div class="card stat-card" id="cardLastRun">
-                <div class="stat-icon">&#9200;</div>
+                <div class="stat-icon" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="lastRunStatus">--</div>
                     <div class="stat-label">Letzter Testlauf</div>
@@ -193,10 +209,9 @@
             <div class="card">
                 <div class="results-header">
                     <h2>Browser Live-Ansicht</h2>
-                    <span id="liveBrowserLabel" style="font-size:0.85rem;color:var(--text-muted);">Warte auf Browser...</span>
+                    <span id="liveBrowserLabel" class="live-browser-label">Warte auf Browser...</span>
                 </div>
-                <img id="liveBrowserImg" src="" alt="Browser Live-Ansicht"
-                     style="width:100%;border-radius:6px;border:1px solid var(--border);display:block;">
+                <img id="liveBrowserImg" src="" alt="Browser Live-Ansicht" class="live-browser-img">
             </div>
         </section>
 
@@ -281,14 +296,14 @@
                 <details class="login-section" id="scanLoginSection">
                     <summary class="login-toggle">Login-Credentials (optional)</summary>
                     <div class="login-fields">
-                        <div class="form-row" style="margin-top: 0.75rem;">
+                        <div class="form-row mt-md">
                             <div class="form-group">
                                 <label for="scanLoginUrlInput">Login-URL</label>
                                 <input type="url" id="scanLoginUrlInput" class="text-input"
                                        placeholder="https://example.com/login" spellcheck="false">
                             </div>
                         </div>
-                        <div class="form-row" style="margin-top: 0.5rem;">
+                        <div class="form-row mt-sm">
                             <div class="form-group">
                                 <label for="scanUsernameInput">Benutzername</label>
                                 <input type="text" id="scanUsernameInput" class="text-input"
@@ -305,26 +320,26 @@
 
                 <!-- Schritt 2: Erkannte Elemente & Vor-Aktionen -->
                 <div id="preActionsSection">
-                    <div id="preActionsDetected" style="display:none;margin-top:1rem;">
-                        <h2 style="margin-bottom:0.75rem;">2. Erkannte Elemente</h2>
-                        <h3 style="font-size:0.95rem;margin-bottom:0.5rem;">Felder</h3>
+                    <div id="preActionsDetected" class="preactions-section" style="display:none;">
+                        <h2>2. Erkannte Elemente</h2>
+                        <h3>Felder</h3>
                         <div id="detectedFields"></div>
-                        <h3 style="font-size:0.95rem;margin:0.75rem 0 0.5rem;">Aktionen</h3>
+                        <h3 class="spaced">Aktionen</h3>
                         <div id="detectedButtons"></div>
                     </div>
                 </div>
 
                 <!-- Schritt 3: Checks auswählen & Scan starten -->
-                <div style="margin-top: 1.25rem;">
-                    <h2 style="margin-bottom:0.75rem;">3. Scan konfigurieren & starten</h2>
-                    <div class="scan-checks" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <div class="preactions-section">
+                    <h2>3. Scan konfigurieren & starten</h2>
+                    <div class="scan-checks">
                         <label class="check-label"><input type="checkbox" value="accessibility" checked> Accessibility</label>
                         <label class="check-label"><input type="checkbox" value="performance" checked> Performance</label>
                         <label class="check-label"><input type="checkbox" value="links" checked> Broken Links</label>
                         <label class="check-label"><input type="checkbox" value="responsive" checked> Responsive</label>
                         <label class="check-label"><input type="checkbox" value="seo" checked> SEO</label>
                     </div>
-                    <div style="margin-top: 0.75rem;">
+                    <div class="mt-md">
                         <button id="btnStartScan" class="btn btn-primary" onclick="startWebsiteScan()">
                             Scan starten
                         </button>
@@ -381,7 +396,7 @@
 
         <!-- Screenshots -->
         <section class="bottom-section" id="scanScreenshotsSection" style="display:none;">
-            <div class="card" style="grid-column: 1 / -1;">
+            <div class="card card-full-width">
                 <h2>Screenshots</h2>
                 <div class="screenshot-grid" id="scanScreenshotGrid"></div>
             </div>
@@ -408,7 +423,12 @@
                     <h2 id="reportModalTitle">Report</h2>
                     <div class="modal-header-actions">
                         <button class="btn btn-small" id="copyReportBtn" onclick="copyReportToClipboard()">Kopieren</button>
-                        <button class="btn-close" onclick="closeModal('reportModal')">&times;</button>
+                        <button class="btn-close" onclick="closeModal('reportModal')" aria-label="Schließen">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <pre class="report-content" id="reportModalContent"></pre>
@@ -420,11 +440,16 @@
             <div class="modal-content card">
                 <div class="modal-header">
                     <h2>Jira Tickets erstellen</h2>
-                    <button class="btn-close" onclick="closeModal('jiraExportModal')">&times;</button>
+                    <button class="btn-close" onclick="closeModal('jiraExportModal')" aria-label="Schließen">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
-                <p id="jiraExportSummary" style="margin-bottom:1rem;color:var(--text-muted);font-size:0.9rem;"></p>
-                <div id="jiraExportList" style="margin-bottom:1rem;max-height:250px;overflow-y:auto;"></div>
-                <div id="jiraExportStatus" style="font-size:0.85rem;min-height:1.5rem;margin-bottom:0.75rem;"></div>
+                <p id="jiraExportSummary" class="jira-export-summary"></p>
+                <div id="jiraExportList" class="jira-export-list"></div>
+                <div id="jiraExportStatus" class="jira-export-status"></div>
                 <div class="modal-actions">
                     <button class="btn btn-secondary" onclick="closeModal('jiraExportModal')">Abbrechen</button>
                     <button class="btn btn-primary" id="btnJiraCreate" onclick="createJiraTickets()">Tickets erstellen</button>
@@ -436,32 +461,32 @@
         <div class="modal" id="saveEnvModal" style="display:none;">
             <div class="modal-content card">
                 <h2 id="saveEnvModalTitle">URL als Umgebung speichern</h2>
-                <div class="form-group" style="margin-bottom: 0.75rem;">
+                <div class="form-group mb-md">
                     <label for="saveEnvName">Name</label>
                     <input type="text" id="saveEnvName" class="text-input" placeholder="z.B. dev, staging, prod">
                 </div>
-                <div class="form-group" style="margin-bottom: 0.75rem;">
+                <div class="form-group mb-md">
                     <label for="saveEnvUrl">URL</label>
                     <input type="url" id="saveEnvUrl" class="text-input">
                 </div>
-                <div class="form-group" style="margin-bottom: 1rem;">
+                <div class="form-group mb-lg">
                     <label for="saveEnvDesc">Beschreibung (optional)</label>
                     <input type="text" id="saveEnvDesc" class="text-input" placeholder="z.B. Entwicklungsumgebung">
                 </div>
-                <details class="login-section" style="margin-bottom: 1rem;">
+                <details class="login-section mb-lg">
                     <summary class="login-toggle">Login-Credentials (optional)</summary>
                     <div class="login-fields">
-                        <div class="form-group" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+                        <div class="form-group mt-md mb-md">
                             <label for="saveEnvLoginUrl">Login-URL</label>
                             <input type="url" id="saveEnvLoginUrl" class="text-input"
                                    placeholder="https://example.com/login">
                         </div>
-                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <div class="form-group mb-md">
                             <label for="saveEnvUsername">Benutzername</label>
                             <input type="text" id="saveEnvUsername" class="text-input"
                                    placeholder="Benutzername">
                         </div>
-                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <div class="form-group mb-md">
                             <label for="saveEnvPassword">Passwort</label>
                             <input type="password" id="saveEnvPassword" class="text-input"
                                    placeholder="Passwort">
@@ -666,7 +691,12 @@
 
                 <div class="help-steps">
                     <div class="help-step">
-                        <div class="help-step-number">&#128196;</div>
+                        <div class="help-step-number" aria-hidden="true">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
                         <div class="help-step-content">
                             <h3>Wo finde ich die Berichte?</h3>
                             <p>Alle Berichte werden automatisch nach jedem Test- oder Scan-Durchlauf erstellt. Sie sind im Bereich <strong>"Reports"</strong> auf der Chatbot-Test-Seite aufgelistet — mit Datum und Uhrzeit.</p>
@@ -674,7 +704,11 @@
                     </div>
 
                     <div class="help-step">
-                        <div class="help-step-number">&#128203;</div>
+                        <div class="help-step-number" aria-hidden="true">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 11H7v6h2v-6zm4 0h-2v6h2v-6zm4 0h-2v6h2v-6zm2.5-9H4.5C3.67 2 3 2.67 3 3.5v17C3 21.33 3.67 22 4.5 22h15c.83 0 1.5-.67 1.5-1.5v-17C21 2.67 20.33 2 19.5 2zM19 20H5V4h14v16z"></path>
+                            </svg>
+                        </div>
                         <div class="help-step-content">
                             <h3>Was steht im Bericht?</h3>
                             <ul class="help-list">
@@ -686,7 +720,12 @@
                     </div>
 
                     <div class="help-step">
-                        <div class="help-step-number">&#128233;</div>
+                        <div class="help-step-number" aria-hidden="true">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </div>
                         <div class="help-step-content">
                             <h3>Bericht weiterleiten</h3>
                             <p>Bericht anklicken, dann <strong>"Kopieren"</strong> drücken. Den Inhalt danach einfach per <strong>Strg+V</strong> (Windows) oder <strong>Cmd+V</strong> (Mac) in eine E-Mail, ein Word-Dokument oder ein Jira-Ticket einfügen.</p>
