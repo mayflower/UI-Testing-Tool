@@ -246,6 +246,9 @@
                 <div class="results-header">
                     <h2>Testergebnisse</h2>
                     <div class="results-summary" id="resultsSummary"></div>
+                    <button id="btnDiff" class="btn btn-small btn-secondary" onclick="openDiffModal()" style="display:none;" title="Vergleich mit vorherigem Testlauf">
+                        Vergleich
+                    </button>
                     <button id="btnJiraExport" class="btn btn-small btn-secondary" onclick="openJiraExportModal()" style="display:none;" title="Fehlgeschlagene Tests als Jira-Tickets erstellen">
                         Jira Tickets erstellen
                     </button>
@@ -479,6 +482,23 @@
                     <button class="btn btn-secondary" onclick="closeModal('jiraExportModal')">Abbrechen</button>
                     <button class="btn btn-primary" id="btnJiraCreate" onclick="createJiraTickets()">Tickets erstellen</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Run-Vergleich-Modal -->
+        <div class="modal" id="diffModal" style="display:none;">
+            <div class="modal-content card modal-wide">
+                <div class="modal-header">
+                    <h2>Vergleich mit vorherigem Testlauf</h2>
+                    <button class="btn-close" onclick="closeModal('diffModal')" aria-label="Schließen">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div id="diffSummary"></div>
+                <div id="diffContent"></div>
             </div>
         </div>
 
@@ -808,6 +828,7 @@
         <p>UI/UX-Testing-Tool v0.1.0</p>
     </footer>
 
+    <script src="/static/js/common.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

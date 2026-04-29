@@ -12,13 +12,23 @@ from playwright.sync_api import sync_playwright
 from config.settings import SCREENSHOTS_DIR, HEADLESS, SLOW_MO
 
 
-# Performance-Schwellwerte (in ms)
+# Performance-Schwellwerte (in ms) — Web-Vitals-orientiert
 _PERF_THRESHOLDS = {
     "ttfb": {"good": 800, "moderate": 1800},
     "fcp": {"good": 1800, "moderate": 3000},
     "lcp": {"good": 2500, "moderate": 4000},
     "dom_load": {"good": 2000, "moderate": 4000},
     "total_load": {"good": 3000, "moderate": 6000},
+}
+
+# Page-Size-Budgets in KB
+_SIZE_THRESHOLDS = {"good": 2000, "moderate": 5000}
+
+# Mapping Status -> Severity (für sinnvolle UI-Badges)
+_STATUS_TO_SEVERITY = {
+    "passed":  "info",
+    "warning": "moderate",
+    "failed":  "serious",
 }
 
 _VIEWPORTS = [
@@ -359,16 +369,26 @@ class WebsiteScanner:
                 self._add("performance", key, "warning", "minor", f"{label}: nicht messbar")
                 continue
             status = _rate(val, key)
-            self._add("performance", key, status, "info" if status == "passed" else "moderate",
-                       f"{label}: {val} ms", value_ms=val)
+            severity = _STATUS_TO_SEVERITY.get(status, "moderate")
+            budget = _PERF_THRESHOLDS.get(key, {})
+            budget_str = f" (Budget: ≤{budget['good']} ms gut, ≤{budget['moderate']} ms ok)" if budget else ""
+            self._add("performance", key, status, severity,
+                       f"{label}: {val} ms{budget_str}", value_ms=val)
 
         # Seitengröße
         size = metrics.get("transfer_size")
         if size:
             size_kb = round(size / 1024)
-            status = "passed" if size_kb < 2000 else ("warning" if size_kb < 5000 else "failed")
-            self._add("performance", "page_size", status, "info",
-                       f"Transfer-Größe: {size_kb} KB", value_kb=size_kb)
+            if size_kb < _SIZE_THRESHOLDS["good"]:
+                status = "passed"
+            elif size_kb < _SIZE_THRESHOLDS["moderate"]:
+                status = "warning"
+            else:
+                status = "failed"
+            severity = _STATUS_TO_SEVERITY.get(status, "moderate")
+            self._add("performance", "page_size", status, severity,
+                       f"Transfer-Größe: {size_kb} KB (Budget: <{_SIZE_THRESHOLDS['good']} KB gut, <{_SIZE_THRESHOLDS['moderate']} KB ok)",
+                       value_kb=size_kb)
 
     # ------------------------------------------------------------------
     # Broken Links

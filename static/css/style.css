@@ -1650,6 +1650,77 @@ body, header, .card, .console-output, select, .url-input, .text-input, .btn-seco
     height: 1.25rem;
 }
 
+/* ========== Run-Vergleich (Diff-Modal) ========== */
+
+.diff-summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.diff-stat {
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.diff-stat.diff-newly-failed   { background: var(--sev-critical-bg); color: var(--sev-critical-fg); }
+.diff-stat.diff-newly-passed   { background: var(--suite-a11y-bg);   color: var(--suite-a11y-fg); }
+.diff-stat.diff-still-failing  { background: var(--sev-serious-bg);  color: var(--sev-serious-fg); }
+.diff-stat.diff-new-tests      { background: var(--sev-info-bg);     color: var(--sev-info-fg); }
+.diff-stat.diff-removed-tests  { background: var(--sev-minor-bg);    color: var(--sev-minor-fg); }
+
+.diff-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.diff-section {
+    margin-bottom: 1.25rem;
+}
+
+.diff-section h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+}
+
+.diff-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.diff-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    margin-bottom: 0.2rem;
+    font-size: 0.875rem;
+    border-left: 3px solid transparent;
+    background: var(--bg);
+}
+
+.diff-item .name { flex: 1; }
+
+.diff-item.newly-failed   { border-left-color: var(--error); }
+.diff-item.newly-passed   { border-left-color: var(--success); }
+.diff-item.still-failing  { border-left-color: var(--warning); }
+.diff-item.new-tests      { border-left-color: var(--primary); }
+.diff-item.removed-tests  { border-left-color: var(--text-muted); opacity: 0.7; }
+
+.diff-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+}
+
 /* ========== Drag&Drop Screenshots ========== */
 
 .screenshot-thumb {
