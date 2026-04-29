@@ -6,6 +6,7 @@ let currentRunId = null;
 let eventSource = null;
 let savedEnvironments = {};
 let editingEnvName = null;
+let runStartTime = null;
 
 // SVG-Icons (Feather/Lucide-Stil, currentColor)
 const ICON_EDIT = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>';
@@ -37,7 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
     loadReports();
     loadScreenshots();
     loadJiraConfig();
-    renderRunSparkline();
+    applyLatestRunToCards();
+    renderAllSparklines();
     syncThemeToggleState();
 
     // Enter-Taste im URL-Feld startet Tests
@@ -287,6 +289,7 @@ async function runTests() {
     setBtnLoading("btnRunTests", true);
     document.getElementById("btnCancel").style.display = "";
     setConnectionStatus("running");
+    runStartTime = Date.now();
 
     // Ergebnisse zuruecksetzen
     clearResults();
@@ -485,12 +488,24 @@ async function onTestsCompleted(data) {
 
     const total = (data.passed || 0) + (data.failed || 0) + (data.skipped || 0);
     const pct = total > 0 ? Math.round(((data.passed || 0) / total) * 100) : 0;
+    const errorPct = total > 0 ? Math.round(((data.failed || 0) / total) * 100) : 0;
+    const durationMs = runStartTime ? Date.now() - runStartTime : null;
+    runStartTime = null;
+
     document.getElementById("lastRunStatus").textContent = `${pct}% bestanden`;
+    document.getElementById("lastRunDuration").textContent = durationMs ? formatDuration(durationMs) : "--";
+    document.getElementById("lastRunErrorRate").textContent = total > 0 ? `${errorPct}%` : "--";
 
     if (!cancelled && total > 0) {
-        addRunToHistory({ pct: pct, passed: data.passed || 0, failed: data.failed || 0, total: total });
+        addRunToHistory({
+            pct: pct,
+            passed: data.passed || 0,
+            failed: data.failed || 0,
+            total: total,
+            duration_ms: durationMs,
+        });
     }
-    renderRunSparkline();
+    renderAllSparklines();
 
     stopLiveBrowser();
 
@@ -1321,14 +1336,34 @@ function addRunToHistory(run) {
     try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) {}
 }
 
-function renderRunSparkline() {
-    const card = document.getElementById("cardLastRun");
+function formatDuration(ms) {
+    if (ms == null || isNaN(ms) || ms < 0) return "--";
+    const totalSec = Math.round(ms / 1000);
+    if (totalSec < 60) return `${totalSec}s`;
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    if (min < 60) return `${min}m ${sec.toString().padStart(2, "0")}s`;
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${h}h ${m.toString().padStart(2, "0")}m`;
+}
+
+function renderAllSparklines() {
+    renderSparkline("cardLastRun",     r => r.pct,                                                  { fixedMin: 0, fixedMax: 100, label: "Pass-Rate-Trend",  fmt: v => `${Math.round(v)}%` });
+    renderSparkline("cardDuration",    r => (r.duration_ms != null ? r.duration_ms : null),         { label: "Dauer-Trend",       fmt: v => formatDuration(v) });
+    renderSparkline("cardErrorRate",   r => r.total > 0 ? (r.failed / r.total) * 100 : 0,           { fixedMin: 0, fixedMax: 100, label: "Fehlerraten-Trend", fmt: v => `${Math.round(v)}%` });
+}
+
+function renderSparkline(cardId, getValue, opts = {}) {
+    const card = document.getElementById(cardId);
     if (!card) return;
     let svg = card.querySelector(".stat-sparkline");
     let empty = card.querySelector(".stat-sparkline-empty");
-    const history = getRunHistory();
 
-    if (history.length < 2) {
+    const history = getRunHistory();
+    const values = history.map(getValue).filter(v => v != null && !isNaN(v));
+
+    if (values.length < 2) {
         if (svg) svg.remove();
         if (!empty) {
             empty = document.createElement("span");
@@ -1341,14 +1376,13 @@ function renderRunSparkline() {
     if (empty) empty.remove();
 
     const w = 80, h = 28, pad = 2;
-    const pcts = history.map(r => r.pct);
-    const min = Math.min(...pcts, 0);
-    const max = Math.max(...pcts, 100);
+    const min = opts.fixedMin !== undefined ? Math.min(...values, opts.fixedMin) : Math.min(...values);
+    const max = opts.fixedMax !== undefined ? Math.max(...values, opts.fixedMax) : Math.max(...values);
     const range = max - min || 1;
-    const stepX = (w - pad * 2) / (pcts.length - 1);
-    const points = pcts.map((p, i) => {
+    const stepX = (w - pad * 2) / (values.length - 1);
+    const points = values.map((v, i) => {
         const x = pad + i * stepX;
-        const y = h - pad - ((p - min) / range) * (h - pad * 2);
+        const y = h - pad - ((v - min) / range) * (h - pad * 2);
         return [x, y];
     });
     const linePath = points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
@@ -1359,7 +1393,7 @@ function renderRunSparkline() {
         svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttribute("class", "stat-sparkline");
         svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-        svg.setAttribute("aria-label", "Trend der letzten Testläufe");
+        svg.setAttribute("aria-label", opts.label || "Trend");
         card.appendChild(svg);
     }
     svg.innerHTML = `
@@ -1367,7 +1401,25 @@ function renderRunSparkline() {
         <path class="line" d="${linePath}"></path>
         <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.5"></circle>
     `;
-    svg.setAttribute("title", history.map(r => `${r.pct}%`).join(" → "));
+    const fmt = opts.fmt || (v => v);
+    svg.setAttribute("title", values.map(fmt).join(" → "));
+}
+
+// Beibehalten als Alias, falls noch irgendwo referenziert
+function renderRunSparkline() {
+    renderAllSparklines();
+}
+
+// Initial-State der Stat-Cards aus History befüllen
+function applyLatestRunToCards() {
+    const history = getRunHistory();
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    const total = last.total || 0;
+    const failed = last.failed || 0;
+    document.getElementById("lastRunStatus").textContent = `${last.pct}% bestanden`;
+    document.getElementById("lastRunDuration").textContent = formatDuration(last.duration_ms);
+    document.getElementById("lastRunErrorRate").textContent = total > 0 ? `${Math.round((failed / total) * 100)}%` : "--";
 }
 
 // ========== Screenshot Drag&Drop ==========
