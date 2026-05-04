@@ -199,7 +199,12 @@ def _run_tests_worker(
         cmd.extend(["--env", env_name])
 
     if suite:
-        suite_map = {"ui": "tests/ui/", "ux": "tests/ux/", "a11y": "tests/a11y/"}
+        suite_map = {
+            "ui": "tests/ui/",
+            "ux": "tests/ux/",
+            "a11y": "tests/a11y/",
+            "flows": "tests/ux/test_chatbot_flows.py",
+        }
         if suite in suite_map:
             cmd.append(suite_map[suite])
 
