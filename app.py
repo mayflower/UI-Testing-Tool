@@ -109,17 +109,34 @@ def api_brand():
     return jsonify(get_brand())
 
 
+def _classify_report(name: str) -> str:
+    """Ordne einen Report-Dateinamen einer Kategorie zu."""
+    if name.startswith("website_scan_"):
+        return "website"
+    if name.startswith("checklist_"):
+        return "checklist"
+    if name.startswith("testbericht_"):
+        return "chatbot"
+    return "unknown"
+
+
 @app.route("/api/reports")
 def api_reports():
-    """Liste aller generierten Reports."""
+    """Liste aller generierten Reports, neueste zuerst."""
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    files = sorted(
+        REPORTS_DIR.glob("*.md"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     reports = []
-    for f in sorted(REPORTS_DIR.glob("*.md"), reverse=True):
+    for f in files:
         reports.append({
             "name": f.name,
             "path": str(f),
             "size": f.stat().st_size,
             "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+            "kind": _classify_report(f.name),
         })
     return jsonify(reports)
 

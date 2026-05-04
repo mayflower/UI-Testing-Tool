@@ -292,6 +292,12 @@
         <section class="bottom-section">
             <div class="card">
                 <h2>Reports</h2>
+                <div class="report-filter" id="reportFilter">
+                    <button class="report-filter-btn active" data-kind="all" onclick="filterReports('all')">Alle</button>
+                    <button class="report-filter-btn" data-kind="chatbot" onclick="filterReports('chatbot')">Chatbot</button>
+                    <button class="report-filter-btn" data-kind="website" onclick="filterReports('website')">Website-Scan</button>
+                    <button class="report-filter-btn" data-kind="checklist" onclick="filterReports('checklist')">Checkliste</button>
+                </div>
                 <div class="report-list" id="reportList">
                     <p class="placeholder">Noch keine Reports vorhanden.</p>
                 </div>
@@ -437,7 +443,7 @@
         <div class="modal" id="discoveryModal" style="display:none;">
             <div class="modal-content card">
                 <h2>Selektor-Discovery</h2>
-                <p id="discoveryStatus">Discovery wird durchgefuehrt...</p>
+                <p id="discoveryStatus" class="loading-dots">Discovery wird durchgefuehrt</p>
                 <div id="discoveryResults"></div>
                 <div class="modal-actions">
                     <button class="btn btn-secondary" onclick="closeModal('discoveryModal')">Schliessen</button>

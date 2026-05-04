@@ -546,11 +546,13 @@ async function runDiscovery() {
     const resultsEl = document.getElementById("discoveryResults");
 
     modal.style.display = "flex";
-    statusEl.textContent = "Discovery wird durchgefuehrt...";
+    statusEl.textContent = "Discovery wird durchgefuehrt";
+    statusEl.classList.add("loading-dots");
     resultsEl.innerHTML = "";
 
     setBtnLoading("btnDiscover", true);
     setConnectionStatus("discovering");
+    startLiveBrowser();
 
     try {
         const creds = getCredentials();
@@ -612,29 +614,64 @@ async function runDiscovery() {
     } catch (e) {
         statusEl.textContent = `Fehler: ${e.message}`;
     } finally {
+        statusEl.classList.remove("loading-dots");
         setBtnLoading("btnDiscover", false);
         setConnectionStatus("idle");
+        stopLiveBrowser();
     }
 }
 
 // ========== Reports ==========
 
+const REPORT_KIND_LABEL = {
+    chatbot: "Chatbot",
+    website: "Website-Scan",
+    checklist: "Checkliste",
+    unknown: "Sonstige",
+};
+
+let _reportsCache = [];
+let _reportFilter = "all";
+
 async function loadReports() {
-    const reports = await api("/api/reports");
+    _reportsCache = await api("/api/reports");
+    renderReports();
+}
+
+function filterReports(kind) {
+    _reportFilter = kind;
+    document.querySelectorAll(".report-filter-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.kind === kind);
+    });
+    renderReports();
+}
+
+function renderReports() {
     const container = document.getElementById("reportList");
+    const reports = _reportFilter === "all"
+        ? _reportsCache
+        : _reportsCache.filter((r) => (r.kind || "unknown") === _reportFilter);
 
     if (reports.length === 0) {
-        container.innerHTML = '<p class="placeholder">Noch keine Reports vorhanden.</p>';
+        const msg = _reportFilter === "all"
+            ? "Noch keine Reports vorhanden."
+            : `Keine Reports der Kategorie "${REPORT_KIND_LABEL[_reportFilter] || _reportFilter}" vorhanden.`;
+        container.innerHTML = `<p class="placeholder">${escapeHtml(msg)}</p>`;
         return;
     }
 
     container.innerHTML = reports
         .map((r) => {
             const date = new Date(r.modified).toLocaleString("de-DE");
+            const kind = r.kind || "unknown";
+            const label = REPORT_KIND_LABEL[kind] || REPORT_KIND_LABEL.unknown;
             return `
                 <div class="report-item" onclick="showReport('${escapeHtml(r.name)}')">
-                    <span class="report-name">${escapeHtml(r.name)}</span>
-                    <span class="report-date">${date}</span>
+                    <span class="report-badge report-badge-${escapeAttr(kind)}">${escapeHtml(label)}</span>
+                    <span class="report-meta">
+                        <span class="report-date">${escapeHtml(date)}</span>
+                        <span class="report-name">${escapeHtml(r.name)}</span>
+                    </span>
                 </div>
             `;
         })
