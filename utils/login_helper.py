@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+import os
+
 from playwright.sync_api import Page
 
 from config.settings import SCREENSHOTS_DIR
 
 _LIVE_SCREENSHOT_PATH = str(SCREENSHOTS_DIR / "_live.png")
+_LIVE_SCREENSHOT_TMP = str(SCREENSHOTS_DIR / "_live.tmp.png")
+
+
+def _save_live_screenshot(page: Page) -> None:
+    """Schreibe Live-Screenshot atomar (tmp + os.replace), damit das Frontend
+    nie eine halbfertig geschriebene Datei lesen kann."""
+    try:
+        page.screenshot(path=_LIVE_SCREENSHOT_TMP)
+        os.replace(_LIVE_SCREENSHOT_TMP, _LIVE_SCREENSHOT_PATH)
+    except Exception:
+        pass
 
 
 # Generische Login-Formular-Selektoren
@@ -251,10 +264,7 @@ def _handle_entra_mfa(page: Page, mfa_timeout: int = 120000) -> None:
     # Polling-Loop: Screenshot alle 500ms + MFA-Abschluss pruefen
     deadline = _time.time() + mfa_timeout / 1000
     while _time.time() < deadline:
-        try:
-            page.screenshot(path=_LIVE_SCREENSHOT_PATH)
-        except Exception:
-            pass
+        _save_live_screenshot(page)
         if "login.microsoftonline.com" not in page.url:
             return
         page.wait_for_timeout(500)
