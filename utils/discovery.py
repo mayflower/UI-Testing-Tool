@@ -182,6 +182,13 @@ _GENERATED_CLASS_RE = re.compile(
     r"^(jsx-[a-f0-9]+|css-[a-z0-9]+|sc-[a-zA-Z]+|_[a-zA-Z0-9]{5,}|[a-f0-9]{8,})$"
 )
 
+# Strukturelle Pseudo-Klassen, die zur Eindeutigkeit eines Selektors beitragen
+# und beim Reduzieren auf tag.class verloren gingen.
+_STRUCTURAL_PSEUDO_RE = re.compile(
+    r":(last-child|first-child|nth-child|nth-of-type|nth-last-child|"
+    r"nth-last-of-type|not|first-of-type|last-of-type|only-child|only-of-type)\b"
+)
+
 
 def _pick_stable_class(classes: str) -> str | None:
     """Waehle eine stabile CSS-Klasse und ueberspringe generierte Hashes.
@@ -300,15 +307,19 @@ def _find_element(page: Page, patterns: list[str]) -> dict | None:
                 element_id = el.evaluate("el => el.id")
                 text = el.evaluate("el => el.textContent?.trim()?.substring(0, 50) || ''")
 
-                # Baue einen eindeutigen Selektor
-                if element_id:
+                # Baue einen eindeutigen Selektor.
+                # Patterns mit strukturellen Pseudo-Klassen (z.B. :last-child)
+                # NICHT auf tag.class reduzieren — die Pseudo-Klasse trägt die
+                # Eindeutigkeit, ohne sie würde der Selektor mehrere Elemente matchen.
+                if _STRUCTURAL_PSEUDO_RE.search(selector):
+                    best_selector = selector
+                elif element_id:
                     best_selector = f"#{element_id}"
                 elif classes and isinstance(classes, str):
                     stable = _pick_stable_class(classes)
                     if stable:
                         best_selector = f"{tag}.{stable}"
                     else:
-                        # Nur generierte Klassen — benutze das Suchmuster direkt
                         best_selector = selector
                 else:
                     best_selector = selector
