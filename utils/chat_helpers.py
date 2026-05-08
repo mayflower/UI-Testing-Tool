@@ -38,6 +38,18 @@ class ChatHelper:
     # Texte die auf UI-Kontrollelemente hinweisen (nicht Bot-Antworten)
     _FEEDBACK_PATTERNS = ("was this helpful", "give feedback", "hilfreich")
 
+    # Streaming-/Loading-Marker, die der Bot waehrend Tool-Calls/RAG zeigt.
+    # Diese sind oft 1+ Sekunden stabil und wuerden den Stabilisator faelschlich
+    # als "fertige Antwort" interpretieren.
+    _LOADING_PATTERNS = (
+        "antwort wird gestreamt",
+        "wird durchsucht",
+        "werden durchsucht",
+        "wird geladen",
+        "lädt...",
+        "laedt...",
+    )
+
     def wait_for_response(self, timeout: int = 30000) -> str | None:
         """
         Warte auf eine neue Bot-Antwort.
@@ -82,6 +94,10 @@ class ChatHelper:
 
         Pollt alle 300ms den aktuellen Text. Gibt ihn zurueck sobald er fuer
         stable_ms unveraendert geblieben ist oder max_wait_ms abgelaufen sind.
+
+        Loading-Marker (z.B. "Antwort wird gestreamt..." / "POIs werden
+        durchsucht: ...") werden NICHT als finaler Text akzeptiert — sie
+        bleiben oft sekundenlang stabil, sind aber kein gueltiges Resultat.
         """
         deadline = time.time() + max_wait_ms / 1000
         last_text = ""
@@ -92,11 +108,23 @@ class ChatHelper:
             if current != last_text:
                 last_text = current
                 last_change = time.time()
-            elif current and (time.time() - last_change) >= stable_ms / 1000:
+            elif (
+                current
+                and not self._is_loading(current)
+                and (time.time() - last_change) >= stable_ms / 1000
+            ):
                 break
             self.page.wait_for_timeout(300)
 
+        # Falls Timeout waehrend Loading-Phase: kein Loading-Marker zurueckgeben
+        if self._is_loading(last_text):
+            return ""
         return last_text
+
+    def _is_loading(self, text: str) -> bool:
+        """Pruefe ob der Text ein Streaming-/Loading-Marker ist."""
+        lower = (text or "").lower()
+        return any(p in lower for p in self._LOADING_PATTERNS)
 
     def _wait_for_bot_message(self, bot_sel: str, timeout: int) -> str | None:
         """Warte auf neues Element das zum bot_message Selektor passt."""
