@@ -6,9 +6,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 reports/*.md
-screenshots/*.png
-screenshots/*.jpg
+reports/*.json
+screenshots/
 *.egg-info/
 dist/
 build/
 .venv/
+.DS_Store
+.claude/
+release_notes/
