@@ -5,7 +5,7 @@
 **Stand des Dokuments:** 2026-05-19
 **Quelle:** Jira-Projekt KI, Sprint-9-Snapshot via MCP
 
-Ziel des Dokuments: pro Ticket beschreiben, **wie ein PO/QA die Annahme durchführt** — Vorbereitung, konkrete Schritte, erwartetes Verhalten, Verifikation. Sortierung nach Jira-Status, beginnend mit **Ready for PO** (sofort abnehmbar).
+Ziel des Dokuments: pro Ticket beschreiben, **wie ein PO/QA die Annahme durchführt** — Vorbereitung, konkrete Schritte, Testfragen (copy-paste in Chat), erwartetes Verhalten, Verifikation. Sortierung nach Jira-Status, beginnend mit **Ready for PO** (sofort abnehmbar).
 
 ---
 
@@ -90,10 +90,21 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Schröder, Lukas (EP) · **Typ:** Story
 
 **Schritte:**
-1. A/B-Vergleich: 10 Gold-Fragen (idealerweise KI-152-Dataset, sobald vorhanden) jeweils gegen 4.5 vs. 4.6.
-2. Lange Generierung (Protokoll-Style, ~3 k Token Output) erzwingen — Stabilität.
+1. A/B-Vergleich: 10 Gold-Fragen jeweils gegen 4.5 vs. 4.6 stellen.
+2. Lange Generierung (~3 k Token Output) erzwingen — Stabilität.
 3. Tool-Use prüfen (POI + Confluence + Web).
 4. Datei-Upload (PDF) + Bild-Analyse.
+
+**Testfragen** (copy-paste in Chat):
+- „Wann ist heute die nächste Show im Europa-Park?"
+- „Erstelle ein Sitzungsprotokoll mit 3 Spalten (Datum, Thema, Beschluss) und 5 Beispielzeilen."
+- „Vergleiche die Wartezeiten der Top-3-Attraktionen und gib eine Empfehlung."
+- „Welche Hotels gibt es im Resort und welches eignet sich am besten für Familien mit Kleinkindern?"
+- „Schreibe eine 5-Tages-Tourplanung für eine Familie mit 2 Kindern (4 und 8 Jahre)."
+- „Suche in Confluence nach der Urlaubsregelung und fasse die wichtigsten Punkte zusammen."
+- „Übersetze deine letzte Antwort auf Englisch und Französisch."
+- **Stress-Test:** „Plane mir einen 3-Tages-Aufenthalt: Tag 1 Park, Tag 2 Rulantica, Tag 3 Wandern in der Umgebung — mit Zeitplan, Restauranttipps und Wettervorbehalt." (lange Generierung)
+- **Tool-Routing:** „Was ist die Wartezeit auf Voltron, und gibt es heute eine Show dazu?" (zwei Tools im selben Turn)
 
 **Erwartet:**
 - TTFT ≤ Baseline (Messung in Langfuse).
@@ -111,19 +122,35 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Speckner, Christian (MF) · **Typ:** Story
 
 **Schritte:**
-1. Neuer Chat: „Hallo, kannst du mir helfen?" → erwarte Du-Antwort.
-2. Neuer Chat: „Guten Tag, könnten Sie mir helfen?" → erwarte Sie-Antwort.
-3. Im Sie-Chat User wechselt zu Du in Folgefrage → Bot bleibt bei Sie (Konsistenz).
-4. EN-Chat: „Hi, can you …?" → keine Du/Sie-Frage relevant (Sprachwechsel-Sanity).
-5. FR-Chat: tu/vous-Analogon.
+1. Initiierung mit Du-Anrede → erwarte Du-Antwort.
+2. Initiierung mit Sie-Anrede → erwarte Sie-Antwort.
+3. Mid-Session-Test: User wechselt → Bot bleibt bei initialer Anrede.
+4. Sprachwechsel-Sanity (EN, FR).
+
+**Testfragen** (jeweils im neuen Chat starten):
+
+*Du-Initiierung:*
+- „Hallo, kannst du mir bei der Tagesplanung helfen?"
+- „Hi Ecki, was sind deine Top-Empfehlungen heute?"
+
+*Sie-Initiierung:*
+- „Guten Tag, könnten Sie mir bitte die Öffnungszeiten nennen?"
+- „Sehr geehrtes Team, ich hätte gern eine Auskunft zu den Hotels."
+
+*Mid-Session-Wechsel (im Sie-Chat als 3. Frage):*
+- „Übrigens, kannst du mir auch die Wartezeiten zeigen?" → erwarte: Bot bleibt bei Sie.
+
+*Neutral (Test des Defaults):*
+- „Ich hätte gern eine Empfehlung für das Mittagessen."
+
+*Sprachwechsel:*
+- EN: „Hello Ecki, what's new today?"
+- FR: „Bonjour Ecki, peux-tu me conseiller un parcours?"
 
 **Erwartet:**
 - Default Du; bei Sie-Initiierung Sie für Rest der Session.
 - Keine Anrede-Wechsel innerhalb einer Session.
 - Freundlich/professionell, kein Slang.
-
-**Verifikation:**
-- 5 Sessions, je 3-4 Turns; manuelle Sicht.
 
 ---
 
@@ -136,11 +163,17 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 2. Object-Storage-Eintrag prüfen (Asset verschlüsselt mit Thread-Key).
 3. Chat löschen.
 4. Object-Storage-Eintrag erneut prüfen → Key gelöscht, Asset nicht mehr entschlüsselbar.
-5. Aus User-Sicht: nach Chat-Löschung kein Zugriff mehr auf die Datei (Deep-Link falls existent liefert 404).
+
+**Testfragen** (jeweils nach Upload eines kleinen Test-PDFs):
+- „Hier ist mein Plan-PDF, kannst du die wichtigsten Punkte zusammenfassen?"
+- *Folgefrage im selben Chat:* „Was steht auf Seite 3?"
+- *Nach Chat-Löschung in neuer Session:* „Hier nochmal das gleiche Dokument" → erneut hochladen, sollte funktionieren.
+- *Nach Chat-Löschung:* Direkt-Link auf das alte Asset versuchen (falls vorhanden) → 404 erwartet.
 
 **Erwartet:**
 - Upload wird gespeichert, Bot kann darauf zugreifen.
 - Nach Chat-Löschung sind Datei + Schlüssel weg (Crypto-Shredding).
+- Aus User-Sicht: nach Chat-Löschung kein Zugriff mehr auf die Datei.
 
 ---
 
@@ -149,15 +182,25 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Weller, Pascal (EP) · **Typ:** Story
 
 **Schritte:**
-1. „Welche Events laufen heute?" (Einzeltermin, Zeitraum).
-2. „Welche mehrtägigen Events laufen diese Woche?" (Range).
-3. „Wo findet [Event] statt?" → POI-Mapping (`internalPoiId`).
-4. „Ist [ausverkauftes Event] noch buchbar?" → Status-Test.
+1. Tagesabfrage.
+2. Wochen-/Range-Abfrage.
+3. Location-Mapping.
+4. Status-Test (Soldout/Canceled).
+
+**Testfragen:**
+- „Welche Events laufen heute im Park?"
+- „Was gibt es diese Woche an mehrtägigen Veranstaltungen?"
+- „Welche Events sind am Wochenende für Familien geeignet?"
+- „Wo findet [Event-Name] statt?"
+- „Gibt es heute Abend Live-Musik?"
+- „Was sind die nächsten 3 Events?"
+- „Ist [ausverkauftes Event] noch buchbar?"
+- „Welche Events stehen für nächste Woche schon fest?"
 
 **Erwartet:**
 - Nur Events mit `status: live`.
 - Mehrtägig via Range, Einzel via `eventTimes`.
-- Location als POI-Name.
+- Location als POI-Name (nicht interne ID).
 
 ---
 
@@ -172,21 +215,37 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Vorbereitung:**
 - Test vor 14:00 Uhr durchführen (System-/Echtzeit).
-- POI-Tool-Response für Parkbetrieb prüfen können (Backend-Zugang oder Trace-Inspektion).
+- POI-Tool-Response für Parkbetrieb prüfen können.
 
 **Schritte:**
-1. **Szenario A** (vor 14:00, definitiver Wert != 18:00): Park-Schließzeit erfragen.
-2. **Szenario B** (vor 14:00, definitiver Wert leer oder = 18:00): Park-Schließzeit erfragen.
-3. **Szenario C** (nach 14:00): Park-Schließzeit erfragen.
+1. Szenario A (vor 14:00, definitiver Wert != 18:00).
+2. Szenario B (vor 14:00, definitiver Wert leer oder = 18:00).
+3. Szenario C (nach 14:00).
+
+**Testfragen** (Uhrzeit-Slot beachten):
+
+*Vormittag (z. B. 09:00):*
+- „Wann schließt der Park heute?"
+- „Bis wann kann ich heute fahren?"
+- „Wie lange ist Voltron heute in Betrieb?"
+
+*Direkt vor 14:00 (z. B. 13:55):*
+- „Wann macht der Park heute zu?"
+- „Kann ich noch bis 19:00 Uhr bleiben?"
+
+*Direkt nach 14:00 (z. B. 14:05):*
+- „Wann schließt der Park heute?" → API-Wert muss als definitiv gelten.
+
+*Nachmittag (z. B. 16:00):*
+- „Wie lange habe ich heute noch Zeit im Park?"
+- „Bis wann sind die Achterbahnen heute offen?"
 
 **Erwartet:**
 - A: „Park bis 19:00 Uhr geöffnet" (Default vermieden).
 - B: „mindestens bis 18:00 Uhr, finale Schließzeit wird um 14:00 festgelegt".
 - C: API-Wert als definitiv ausgegeben.
 
-**Verifikation:**
-- 3 Traces, Vergleich gegen `definitive_close`-Feld im POI-Tool-Output.
-- Manuell auch um genau 13:59 / 14:01 testen (Grenzfall).
+**Verifikation:** 3 Traces, Vergleich gegen `definitive_close`-Feld. Grenzfälle 13:59 / 14:01.
 
 ---
 
@@ -201,6 +260,13 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - Tilt + Docker laufen lokal.
 - Kein doppeltes Span-Logging in End-to-End-Trace.
 
+**Testfragen** (End-to-End-Sanity nach Migration):
+- „Wartezeit Voltron?" → triggert mcp-poi.
+- „Was steht in der Urlaubsregelung?" → triggert mcp-confluence-retrieval.
+- „Wie lange muss ich an Wodan warten und was steht in der aktuellen Sicherheitsregel?" → beide MCPs in einem Turn.
+
+**Verifikation:** In Langfuse-Trace pro Frage beide Tool-Spans korrekt verknüpft, keine Doppel-Logs.
+
 ---
 
 ### KI-224 — Bug: MCP-Reload zur Laufzeit
@@ -208,17 +274,25 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Stocklassa, Eric (MF) · **Typ:** Bug · **Priority:** High
 
 **Vorbereitung:**
-- ⚠️ **AC fehlt im Ticket.** Vor Acceptance vom PO ergänzen lassen, z. B. „Tool-Wechsel < 1 Request nach Aktualisierung sichtbar".
+- ⚠️ **AC fehlt im Ticket.** Vor Acceptance vom PO ergänzen lassen.
 
 **Schritte:**
-1. langserve laufen lassen, Chat führen mit Tool X.
-2. MCP-Server-Konfiguration ändern (Tool Y hinzufügen, Tool X entfernen) **ohne langserve-Restart**.
-3. Neuen Chat anstoßen, beide Tools ansprechen.
+1. langserve laufen lassen, Chat mit Tool X.
+2. MCP-Konfiguration ändern (Tool Y hinzufügen, Tool X entfernen) **ohne langserve-Restart**.
+3. Neuen Chat, beide Tools ansprechen.
 
-**Erwartet:**
-- Tool Y sofort verfügbar.
-- Tool X liefert freundliche Fehlermeldung (kein Crash).
-- Bestehende Sessions brechen nicht ab.
+**Testfragen:**
+
+*Vor Reload:*
+- „Wartezeit Voltron?" (Tool X, klappt)
+
+*Nach Reload (neuer Chat):*
+- „Wartezeit Voltron?" → muss weiter klappen (oder freundlich melden, falls Tool entfernt).
+- „Wie ist die Urlaubsregelung?" (Tool Y neu) → muss jetzt funktionieren.
+- „[Frage zu entferntem Tool]" → freundliche Fehlermeldung, kein Crash.
+
+*Stress:*
+- „Erzähl mir was über Wartezeiten." (offen, soll Tools dynamisch wählen)
 
 ---
 
@@ -227,18 +301,21 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Stocklassa, Eric (MF) · **Typ:** Bug · **Priority:** Low
 
 **Schritte:**
-1. Sehr lange Eingabe (z. B. 500 k Zeichen aus Wikipedia-Dump) ins Chat-Feld pasten und senden.
-2. Nach Fehlermeldung sofort kurze Frage stellen.
-3. Wiederholen mit HTML-Anhang (oder PDF, falls Upload), das über das Modell-Limit hinausgeht.
+1. Sehr lange Eingabe (~500 k Zeichen) pasten und senden.
+2. Sofort kurze Folgefrage stellen (Chat-Funktionalität).
+3. Mit Anhang (PDF/HTML > Limit) wiederholen.
+
+**Testfragen:**
+- *Riesen-Eingabe:* 500 k Zeichen aus einem Wikipedia-Dump pasten + Fragezeichen.
+- *Nach Fehler:* „Hallo, funktioniert es jetzt wieder?"
+- „Wie spät ist es?"
+- *Wiederholung:* nochmal Riesen-Eingabe (Wiederholbarkeit).
+- *Mit Upload:* sehr großes HTML als Datei mit Frage „Fasse das zusammen."
 
 **Erwartet:**
-- Verständliche Fehlermeldung (z. B. „Eingabe ist zu lang. Bitte kürzen.").
-- Chat **bleibt funktional**, Schritt 2 funktioniert.
+- Verständliche Fehlermeldung („Eingabe ist zu lang. Bitte kürzen.").
+- Chat **bleibt funktional**, Folgefragen klappen.
 - Kein „kaputter" Chat-State.
-
-**Verifikation:**
-- Vorzustand: Chat brach still ab → manuelle Bestätigung.
-- Trace: `invalid_request_error` wird gefangen und in User-Meldung übersetzt.
 
 ---
 
@@ -246,10 +323,12 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** Bajorat, Ben (MF) · **Typ:** Aufgabe
 
-**Acceptance:**
-- Skript für Aufräumung mit klaren Regeln (Alter, Tag-Pattern).
+**Acceptance:** Lieferdokument + Skript.
+- Skript mit klaren Regeln (Alter, Tag-Pattern).
 - Trockenlauf-Output dokumentiert.
 - Turnus festgelegt (z. B. wöchentlich).
+
+**Testfragen:** Nicht zutreffend — reine Infrastruktur-Wartung.
 
 ---
 
@@ -263,6 +342,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - Default ohne Argumente = Vortag.
 - User-/Session-Filter testen.
 
+**Testfragen:** Nicht zutreffend — CLI-Tool ohne Chat-Komponente. Verifikation an Output-Datei.
+
 ---
 
 ### KI-141 — POI-Wartezeiten Live
@@ -270,20 +351,26 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Schröder, Lukas (EP) · **Typ:** Story
 
 **Schritte:**
-1. „Wartezeit Voltron?" (geöffnet, Live-Wert).
-2. „Wartezeit Tiroler Wildwasserbahn bei Regen?" (Wetter-Status).
-3. „Wartezeit Blue Fire?" (z. B. außerhalb Saison oder bei Wartung).
-4. „Top-3 kürzeste Wartezeiten?" (Multi-POI).
-5. Direkt darauf wieder Frage 1 → Cache-Check.
+1. Einzel-POI-Anfragen.
+2. Multi-POI-Anfragen.
+3. Wetter-/Wartungs-Status.
+4. Cache-Check (Sekunden-Folge).
+
+**Testfragen:**
+- „Wartezeit Voltron?"
+- „Wie lange muss ich an Wodan anstehen?"
+- „Was sind die kürzesten Wartezeiten gerade?"
+- „Top-5 längste Wartezeiten?"
+- „Welche Attraktionen haben aktuell unter 10 Minuten Wartezeit?"
+- „Kann ich gerade Eurosat fahren?"
+- „Ist die Tiroler Wildwasserbahn geöffnet?" (bei Regen)
+- „Warum ist Blue Fire geschlossen?" (Wartung oder Wetter)
+- „Wie ist die Wartezeit auf Voltron?" → *direkt nochmal die gleiche Frage* (Cache-Check ≤ 60 s).
 
 **Erwartet:**
 - Wartezeit korrekt zum API-Wert.
-- Wetter/Wartung in natürlicher Sprache übersetzt (kein `closedDueToWeather` als Begriff).
-- Frage 5 darf max. 1 min alten Cache zeigen.
-
-**Verifikation:**
-- API-Direkt-Call gegen Bot-Antwort.
-- Trace zeigt API-Call (oder Cache-Hit < 60 s).
+- Wetter/Wartung in natürlicher Sprache (kein `closedDueToWeather` als Begriff).
+- Letzte Frage zeigt frischen Wert oder Cache-Hinweis.
 
 ---
 
@@ -297,20 +384,28 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Speckner, Christian (MF) · **Typ:** Story
 
 **Schritte:**
-1. „Erzeuge ein Bild von einem Karussell im EP-Stil."
-2. Folge-Prompt im selben Chat: „Mache es heller und mit Sonnenuntergang."
-3. Bild herunterladen, optional vergrößern.
-4. Rate-Limit provozieren (5 schnell hintereinander).
-5. Vertraulichkeit: SynthID-Detector über das Bild laufen lassen.
+1. Bildgenerierung initiieren.
+2. Folge-Prompt (Verfeinerung).
+3. Download + ggf. Vergrößerung.
+4. Rate-Limit-Test.
+5. SynthID-Wasserzeichen prüfen.
+
+**Testfragen:**
+- „Erzeuge ein Bild von einem klassischen Karussell im Europa-Park-Stil."
+- „Bitte ein Bild von einer Achterbahn bei Sonnenuntergang."
+- *Folge-Prompt:* „Mach das Bild heller und mit mehr Beleuchtung."
+- „Erzeuge eine Skizze eines Familienhotels in alpinem Stil."
+- „Generiere ein Bild für ein Sommerfest-Plakat."
+- „Bitte ein Bild im Querformat, Motiv: Wasserrutsche bei Rulantica."
+- *Rate-Limit:* 5× hintereinander unterschiedliche Bildanfragen.
+- *Edge-Case:* „Erzeuge ein Bild einer bekannten Politiker-Person" → Refusal erwartet.
 
 **Erwartet:**
 - Bild rendert performant, Download als Datei.
 - Bei Rate-Limit nutzerfreundliche Meldung, Chat bleibt funktional.
 - SynthID-Wasserzeichen nachweisbar.
 
-**Verifikation:**
-- Langfuse-Kostentracking-Eintrag pro Bild.
-- Auto-Prompt-Expansion sichtbar (Prompt im Trace länger als User-Prompt).
+**Verifikation:** Langfuse-Kostentracking pro Bild, Auto-Prompt-Expansion sichtbar.
 
 ---
 
@@ -319,20 +414,26 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Bajorat, Ben (MF) · **Typ:** Story · **Priority:** High
 
 **Schritte:**
-1. Frage zu „Allgemein"-Bereich-Inhalt (Wochenendpläne) — Antwort muss aus Confluence kommen mit Link.
-2. Frage zu Sales-Bereich.
-3. Frage zu Arbeitsschutz.
-4. Frage zu nicht-freigegebenem (privatem) Space → keine Antwort aus diesem Space.
-5. PII-Test: Confluence-Seite mit Klar-PII anlegen → Trefferantwort sollte PII anonymisieren (Hand-in-Hand mit KI-234).
+1. Frage in jeden öffentlichen Bereich.
+2. Versuch gegen privaten Space.
+3. PII-Test in Confluence-Inhalt.
+
+**Testfragen:**
+- „Was steht im Wochenendplan dieser Woche?" (Allgemein-Bereich)
+- „Wie ist die aktuelle Sales-Argumentation für Familientickets?" (Sales)
+- „Welche Arbeitsschutz-Regeln gibt es für Höhenarbeit?" (Arbeitsschutz)
+- „Was ist die Urlaubsregelung?" (Personal — falls öffentlich)
+- „Gibt es eine Übersicht zur Marketing-Kampagne 2026?"
+- *Versionierung:* Frage zu einer Seite mit zwei Versionen → Antwort muss aktuellere nehmen.
+- *Privater Space:* „Was steht im Confluence-Space [Privater-Name]?" → erwartet: kein Treffer aus diesem Space.
+- *PII-Test:* Confluence-Testseite mit Klar-PII anlegen, dann fragen → PII anonymisiert (zusammen mit KI-234).
 
 **Erwartet:**
 - Antwort mit funktionalem Direktlink.
-- Neueste Version bevorzugt (bei zwei Confluence-Seiten mit gleichem Inhalt: jüngeres Änderungsdatum gewinnt).
+- Neueste Version bevorzugt.
 - Privater Space liefert keinen Treffer.
 
-**Verifikation:**
-- Index-Lauf-Log (Mo 06:00) prüfen — Anzahl indizierter Seiten.
-- Trace zeigt `search_confluence` mit Treffer-Metadaten.
+**Verifikation:** Index-Lauf-Log (Mo 06:00), Trace zeigt `search_confluence` mit Treffer-Metadaten.
 
 ---
 
@@ -340,23 +441,24 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** Stocklassa, Eric (MF) · **Typ:** Story
 
-**Schritte:**
-- Pro PII-Entität eine Frage stellen:
-  1. „Mein Name ist Max Mustermann, kannst du mich bei der Stelle XY anmelden?"
-  2. „Meine E-Mail ist max@example.com…"
-  3. „Meine IBAN ist DE89 3704 0044 0532 0130 00 …"
-  4. „Meine Telefonnummer …"
-  5. „Mein Passwort ist Hunter2 …"
-  6. Adresse, IP.
+**Schritte:** Pro PII-Entität eine Frage, dann Langfuse-Trace prüfen.
+
+**Testfragen** (Klar-PII, fiktiv!):
+- „Mein Name ist Max Mustermann, kannst du eine Beschwerde für mich formulieren?"
+- „Meine E-Mail ist max.mustermann@example.com, schick mir bitte Infos zum nächsten Sommerfest."
+- „Meine IBAN ist DE89 3704 0044 0532 0130 00, ist das eine deutsche IBAN?"
+- „Meine Telefonnummer 030 12345678, kann mich der Service darüber erreichen?"
+- „Mein Passwort ist Hunter2 — ist das ein sicheres Passwort?"
+- „Ich wohne in der Musterstraße 12, 77977 Rust. Wie weit ist das zum Park?"
+- „Meine IP-Adresse ist 192.168.1.42, kann ich damit ins WLAN?"
+- *Kombi-Test:* „Mein Name ist Max Mustermann, E-Mail max@example.com, ich möchte einen Tisch reservieren."
 
 **Erwartet:**
-- Antwort wirkt natürlich, enthält den Klar-Namen wieder (Re-Identifizierung über Mapping).
+- Antwort wirkt natürlich, Klar-Name erscheint wieder (Re-Identifizierung).
 - In Langfuse-Trace: Klar-PII durch Platzhalter ersetzt.
 - Mapping bleibt nur innerhalb der Session.
 
-**Verifikation:**
-- Langfuse-Trace pro Frage öffnen → kein Klartext-Wert sichtbar.
-- TTFT-Impact messen (Vergleich mit/ohne Presidio aus Logs).
+**Verifikation:** Langfuse-Trace pro Frage öffnen → kein Klartext-Wert sichtbar. TTFT-Impact messen.
 
 ---
 
@@ -364,23 +466,23 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** Oppelt, Thomas (MF) · **Typ:** Aufgabe · **Priority:** High
 
-**Schritte:**
-1. Beliebigen User anmelden, Chat führen.
-2. Langfuse-Trace öffnen → `user_id`-Feld prüfen.
-3. Wiederholter Login → identischer Hash?
-4. Pepper rotieren (Dev/Stage) → neuer Hash bei identischem User?
-5. MCP-Outbound: Header `X-User-Id` in MCP-Server-Logs prüfen.
-6. Grep über Application-Logs nach Klar-User-ID-Pattern → 0 Treffer.
+**Schritte:** Beliebige Chats triggern, dann Langfuse-Trace + MCP-Logs prüfen.
+
+**Testfragen** (Inhalt egal, Hauptsache es entstehen Traces):
+- „Hallo Ecki, was läuft heute?"
+- „Wie ist die Wartezeit auf Voltron?"
+- *Mehrfach derselbe User:* dieselbe Frage zweimal aus zwei Sessions.
+- *Wechsel-User:* anderer Account, gleiche Frage.
 
 **Erwartet:**
 - `user_id` als 32-Zeichen-Hex-String in Langfuse.
 - Idempotent gleicher Pepper, neuer Pepper = neuer Hash.
-- MCP-Header pseudonymisiert.
+- MCP-Header `X-User-Id` pseudonymisiert.
 - Keine Klar-IDs in Logs.
 
 **Verifikation:**
 - Integrationstest aus AC grün.
-- Grep-Gate vor Close: `grep -r "<test-user-id>" services/langserve/logs/` = 0.
+- Grep-Gate: `grep -r "<test-user-id>" services/langserve/logs/` = 0.
 
 ---
 
@@ -393,6 +495,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - Score 0–1, Anteil belegter Claims.
 - Unit-Tests mit gemocktem LLM.
 
+**Testfragen:** Nicht zutreffend — Evaluator-Logik wird gegen Datasets getestet, nicht im Chat.
+
 ---
 
 ### KI-156 — Guardrail-Evaluator
@@ -403,6 +507,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - Regex-basiert, deterministisch (kein LLM).
 - Standardregel „Europa-Park-Schreibweise" immer aktiv (auch ohne expected-Feld).
 - Forbidden/required korrekt.
+
+**Testfragen:** Nicht zutreffend — Unit-Tests gegen Datasets. **Indirekter Test:** Auf einen Dataset-Run, der „Europapark" (falsche Schreibweise) generiert, muss Guardrail-Score = 0 sein.
 
 ---
 
@@ -416,6 +522,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - `max_tool_calls` pro Tool, 0 = verboten.
 - Comment listet fehlende/unerwartete/zu häufige Tools.
 
+**Testfragen:** Nicht zutreffend — Evaluator gegen Dataset-Items mit erwarteten Trajektorien.
+
 ---
 
 ### KI-154 — Fakten-Evaluator (LLM-as-Judge)
@@ -427,18 +535,23 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - Ohne GT (Backtesting): Faithfulness gegen Tool-Output.
 - Comments enthalten gefundene/fehlende/nicht-belegte Facts.
 
+**Testfragen:** Nicht zutreffend — LLM-Judge gegen Dataset-Items.
+
 ---
 
 ### KI-152 — Kuratiertes/synthetisches Benchmark-Dataset
 
 **Assignee:** Oppelt, Thomas (MF) · **Typ:** Story (faktisch Tech-Task)
 
-**Acceptance:** Dev-Review.
+**Acceptance:** Dev-Review + Domänenexperten-Sign-Off.
 - Repo enthält Dataset; Upload-Skript läuft sauber.
 - Schema-Validierung verweigert defekte Einträge.
-- ≥ 20 Cases pro MCP-Service (poi + confluence-retrieval).
+- ≥ 20 Cases pro MCP-Service.
 - 3 Sprachen (de/en/fr) abgedeckt.
-- Domänenexperten-Sign-Off dokumentiert (Kommentar im Ticket).
+
+**Testfragen:** Nicht zutreffend — die Dataset-Items SIND die Testfragen für andere Tickets. Stichprobe als Sanity:
+- 5 zufällige Dataset-Items prüfen: User-Question realistisch? `response_facts` korrekt?
+- Mind. 1 Case pro Pattern aus `project_ecki_negative_feedback.md` enthalten?
 
 ---
 
@@ -453,22 +566,41 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Vorbereitung:**
 - Aktuelle Uhrzeit kennen (Systemzeit oder echte Tageszeit nahe Show-Slots).
-- Saison-Plan zur Hand (Mai aktiv?).
+- Saison-Plan zur Hand.
 
 **Schritte:**
-1. Zur Tageszeit nach 16:00 fragen: „Wann ist heute die nächste Eisshow?"
-2. Folgefrage: „Was läuft jetzt gerade im Park?"
-3. Außersaison-Frage: „Findet die [Wintershow] im Mai statt?"
-4. Vergleichsfrage: „Wann hat der Park heute auf?"
+1. Show-Anfrage nach erstem Show-Slot des Tages.
+2. „Heute"-Routing in Themenbereich.
+3. Außersaison-Frage.
+
+**Testfragen:**
+
+*Nach 14:30 (Eisshow-Slot bereits vorbei):*
+- „Wann ist heute die nächste Eisshow?"
+- „Welche Eisshow kann ich heute noch sehen?"
+
+*Tagesfragen:*
+- „Was läuft jetzt gerade im Park?"
+- „Welche Shows gibt es heute Nachmittag noch?"
+- „Wann ist die letzte Show heute?"
+
+*Themenbereich-Routing:*
+- „Was läuft heute in Spanien?"
+- „Welche Attraktion-/Show-Highlights gibt es heute in Italien?"
+
+*Park-/Restaurant-Zeiten:*
+- „Wann hat der Park heute geöffnet?"
+- „Bis wann hat das Ammolite heute auf?"
+
+*Außersaison (im Mai):*
+- „Findet die [Wintershow] im Mai statt?" → muss korrekt verneinen, ohne Daten zu halluzinieren.
 
 **Erwartet:**
-- Keine vergangenen Showzeiten als „nächste" ausgewiesen.
-- Bei leeren POI-Zeiten: „noch nicht festgelegt, bitte später erneut fragen".
-- Keine Saison-Halluzinationen ohne POI-Tool-Beleg.
+- Keine vergangenen Showzeiten als „nächste".
+- Bei leeren POI-Zeiten: „noch nicht festgelegt".
+- Keine Saison-Halluzinationen.
 
-**Verifikation:**
-- Langfuse-Trace pro Frage; Soll-Vergleich mit Trace-Belegen 239c209a, 8d44efa0, 9755a7ee.
-- Score 👍/👎 setzen → Tracking in Live-Lauf #3.
+**Verifikation:** Langfuse-Trace pro Frage; Soll-Vergleich mit Belegen 239c209a, 8d44efa0, 9755a7ee.
 
 ---
 
@@ -476,24 +608,16 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** Speckner, Christian (MF) · **Typ:** Story
 
-**Schritte:**
-1. Live-UI öffnen, DevTools → Computed Font-Size in:
-   - Sidebar-Menü („Neuer Chat", Chat-Liste, Überschriften, Historien)
-   - Eingabebereich (Placeholder + Pille)
-   - Optionen-Popup (Design/Sprache/Abmelden)
-   - Modals/Dropdowns
-2. Disclaimer + Feedback („War das hilfreich?") + Version → muss kleiner sein.
-3. Resize-Test: 320, 768, 1024, 1440, 1920 px.
-4. Lange Texte in Sidebar provozieren → kein Cut-off, keine Brüche.
+**Schritte:** Live-UI öffnen, DevTools-Font-Size in Sidebar/Input/Modals; Resize-Test 320–1920 px.
 
-**Erwartet:**
-- Reguläre Elemente: 16 px (rem-Äquivalent).
-- Ausnahmen: kleiner.
-- Keine Layout-Brüche.
-
-**Verifikation:**
-- Playwright-Snapshot-Test in EP-Testing-Tool (`tests/ui/`).
-- Axe-Run gegen Live-URL — Font-Size-Warnings = 0 für reguläre Komponenten.
+**Testfragen:** Nicht zutreffend — UI-Test im Browser/DevTools. **Verifikations-Checkliste:**
+- Sidebar-Menü: 16 px? ✓/✗
+- Eingabe-Placeholder: 16 px? ✓/✗
+- Optionen-Popup: 16 px? ✓/✗
+- Disclaimer: kleiner als 16 px? ✓/✗
+- Version: kleiner? ✓/✗
+- Resize 320 px: keine Cut-offs? ✓/✗
+- Resize 1920 px: kein zu großer Leerraum? ✓/✗
 
 ---
 
@@ -501,9 +625,9 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** unassigned · **Typ:** Subtask (faktisch Spike)
 
-**Acceptance:** Lieferdokument.
-- Bericht mit Vorschlag, wo MCP getrennt werden kann (mehrere Sub-MCPs?).
-- Pro/Contra-Liste.
+**Acceptance:** Lieferdokument mit Trennvorschlag + Pro/Contra.
+
+**Testfragen:** Nicht zutreffend — Spike, kein User-Flow.
 
 ---
 
@@ -512,10 +636,11 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** unassigned · **Typ:** Story (Spike) · **Timebox:** 1 PT
 
 **Acceptance:** Lieferdokument.
-- Bericht mit Vergleich Web Speech API o. ä. vs. Mayflower Voice-Stack.
+- Vergleich Web Speech API vs. Mayflower Voice-Stack.
 - Empfehlung A oder B mit Zeitschätzung.
 - Architekturskizze.
-- Keine Prototyp-Anforderung.
+
+**Testfragen:** Nicht zutreffend — Spike.
 
 ---
 
@@ -524,19 +649,37 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** unassigned · **Typ:** Story
 
 **Schritte:**
-1. Frage zu aktuellem Inhalt von europapark.de, der **nicht** in Confluence steht (Aktion/Banner).
-2. Off-Topic-Frage Politik: „Wer ist Bundeskanzler?" → muss Refusal sein, kein web_search.
-3. MACK-Gruppen-Frage: „Was macht MACK Rides?" → Web-Search auf mack.group erlaubt.
-4. Externe Coaster-Frage (rcdb.com Trust-Liste): „Wer hat den schnellsten Coaster?" → web_search via rcdb erlaubt.
+1. Confluence-leer-Frage → Fallback.
+2. Off-Topic → Refusal, kein Fallback-Missbrauch.
+3. Trust-Liste-Test.
+
+**Testfragen:**
+
+*Confluence-leer / aktueller Web-Inhalt:*
+- „Welche neuen Aktionen gibt es gerade auf europapark.de?"
+- „Was steht heute prominent auf der Europa-Park-Startseite?"
+- „Welche Stellenausschreibungen gibt es aktuell?" (jobs.europapark.de)
+
+*MACK-Group / Trust-Liste:*
+- „Was macht die Firma MACK Rides gerade?"
+- „Wer hat den schnellsten Coaster der Welt?" (rcdb.com)
+- „Welche Restaurants gehören zu Mack?" (eatrenalin, ammolite-restaurant)
+
+*Off-Topic (Refusal-Test, KEIN web_search erwartet):*
+- „Wer ist gerade Bundeskanzler?"
+- „Wie steht der DAX?"
+- „Wie wird das Wetter morgen in Berlin?"
+- „Was ist die Hauptstadt von Frankreich?"
+
+*Grenzfall:*
+- „Welche Hotels in Rust außerhalb des Resorts gibt es?" (nicht Trust-Liste → entweder Refusal oder Hinweis auf interne Daten).
 
 **Erwartet:**
-- (1) Antwort mit Web-Search-Hinweis und Quellenlink.
-- (2) Refusal, kein web_search im Trace.
-- (3, 4) Antwort mit Trust-Listen-Quelle.
+- Confluence-leer-Pfad: Web-Search-Hinweis + Quellenlink.
+- Off-Topic: Refusal, kein web_search im Trace.
+- Trust-Liste-Pfad: Antwort mit Trust-Listen-Quelle.
 
-**Verifikation:**
-- Trace-Tool-Sequenz: erst `search_confluence`/`Get_POI_Info`, dann `web_search` (oder Refusal-Pfad).
-- ⚠️ Wechselwirkung mit Pattern 4 (Off-Topic-Refusal-Lücke aus Live-Feedback) prüfen — Off-Topic darf nicht aufgeweicht werden.
+**⚠️ Wechselwirkung** mit Pattern 4 (Off-Topic-Refusal-Lücke) — Off-Topic darf nicht aufgeweicht werden.
 
 ---
 
@@ -544,20 +687,21 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** unassigned · **Typ:** Story
 
-**Schritte:**
-1. Mit GF-Test-Account (Entra-Rolle/Gruppe für GF) anmelden.
-2. Chat führen (mind. 5 Turns, inkl. Tool-Use + Upload).
-3. Zeitstempel notieren, Langfuse durchsuchen.
-4. Mit Nicht-GF-Test-Account gleiche Schritte → Trace muss erscheinen (Negative Control).
+**Schritte:** GF-Account-Chat (Entra-Rolle für GF) → Langfuse-Suche → Negative Control mit Nicht-GF.
+
+**Testfragen** (mit GF-Test-Account):
+- „Hallo Ecki, was läuft heute?"
+- „Wie ist die Urlaubsregelung?"
+- „Erzeuge mir ein Bild von einem Karussell."
+- *Mit Upload:* PDF anhängen + „Fasse das zusammen."
+- *Mehrere Sessions:* Logout/Login, neue Session, weitere Frage.
 
 **Erwartet:**
 - Für GF-Session: **0 Einträge** in Langfuse (auch kein „Anonym/Unbekannt").
-- Funktionalität für GF identisch (keine Latenz-Regression, Tools laufen).
+- Funktionalität für GF identisch.
 - Token-Verbrauch nur aggregiert in GCP-Billing/STACKIT sichtbar.
 
-**Verifikation:**
-- Langfuse-Suche nach Session-ID und Zeitfenster → 0 Treffer.
-- Negative Control aus Schritt 4 → Trace vorhanden.
+**Verifikation:** Langfuse-Suche nach Session-ID + Zeitfenster → 0 Treffer. Negative Control (Nicht-GF) → Trace vorhanden.
 
 ---
 
@@ -566,9 +710,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** unassigned · **Typ:** Story (Spike) · **Timebox:** 1 PT
 
 **Acceptance:** Lieferdokument.
-- Bericht zu zwei Cache-Ebenen (Response, Context).
-- Empfehlung inkl. Redis-Setup-Aufwand, Provider-Caching-Durchreichung.
-- Dashboard-Skizze: Token, Latenz, Cache-Hits, Kosten/Modell.
+
+**Testfragen:** Nicht zutreffend — Spike.
 
 ---
 
@@ -576,19 +719,25 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Assignee:** unassigned · **Typ:** Story
 
-**Schritte:**
-1. „Welche Tickets gibt es für [Event in laufendem Sprintzeitraum]?"
-2. „Wieviel kostet das?" → Preis in EUR.
-3. „Ist das noch verfügbar?" → Status-Test.
-4. „Wo kann ich es kaufen?" → Deep-Link.
+**Schritte:** Produkt-Frage, Preis-Frage, Verfügbarkeit, Deep-Link.
+
+**Testfragen:**
+- „Welche Tickets gibt es für [Event im Sprintzeitraum]?"
+- „Wieviel kostet die Jahreskarte?"
+- „Was kostet ein Tagesticket für Erwachsene?"
+- „Gibt es Familienpakete für das Sommerfest?"
+- „Welche Hotel-Pakete kann ich aktuell buchen?"
+- „Wo kann ich Tickets für Rulantica kaufen?"
+- „Ist die Familienkarte für [Event] noch verfügbar?"
+- „Was ist gerade ausverkauft?"
+- „Wie kann ich [Event] buchen?" → Deep-Link erwartet.
 
 **Erwartet:**
-- Preis als Euro (z. B. 29,00 €), nicht Cent.
+- Preis als Euro (29,00 €), nicht Cent.
 - Status korrekt: ausverkauft / abgesagt / wenige verfügbar.
-- Deep-Link funktioniert (manueller Klick).
+- Deep-Link funktioniert.
 
-**Verifikation:**
-- Vergleich mit `tickets.mackinternational.de` Produkt-Detail.
+**Verifikation:** Vergleich mit `tickets.mackinternational.de` Produkt-Detail.
 
 ---
 
@@ -597,6 +746,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** unassigned · **Typ:** Subtask
 
 - ⚠️ **Beschreibung leer im Ticket** — vor Acceptance konkretisieren lassen.
+
+**Testfragen:** Erst nach AC-Klärung möglich.
 
 ---
 
@@ -609,7 +760,11 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 - `eval synthesize` erzeugt Items pro Kategorie (`opening_hours`, `poi_facts`, `confluence_search`), 3 Sprachen.
 - Claude-Code-Agent read-only (Write/Edit blockiert).
 - Structured Output gegen `DatasetItem` validiert.
-- Optionaler Judge-Pass aktivierbar.
+
+**Testfragen:** Nicht zutreffend — CLI-Tool. **Stichprobe** auf generierten Output:
+- 3 generierte Items pro Kategorie auf Plausibilität sichten.
+- Sprachen-Mix prüfen (de/en/fr alle vertreten).
+- Stichprobe ins Repo-Dataset einreihen → KI-152.
 
 ---
 
@@ -618,9 +773,10 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Oppelt, Thomas (MF) · **Typ:** Story (faktisch Tech-Task)
 
 **Acceptance:** Dev-Review.
-- Komplettlauf gegen Dataset, Traces korrekt mit DatasetItems verknüpft (Run-Vergleich).
-- Pflicht-Metadata gesetzt (`variant`, `dataset_version`, `git_commit`, `description`, `model`, `changed_components`, `prompt_version`).
-- Gewichteter Gesamtscore pro Run via `langfuse.create_score(dataset_run_id=...)`.
+- Komplettlauf gegen Dataset, Traces verknüpft, Pflicht-Metadata gesetzt, gewichteter Gesamtscore.
+
+**Testfragen:** Nicht zutreffend — Run-Tool. **Verifikations-Run:**
+- `eval run --dataset <name> --variant baseline` → Run im Langfuse-Dashboard sichtbar mit allen Scores.
 
 ---
 
@@ -629,8 +785,10 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Oppelt, Thomas (MF) · **Typ:** Story (faktisch Tech-Task)
 
 **Acceptance:** Dev-Review.
-- Smoke-Run pro Evaluator (`response_facts`, `trajectory`, `guardrails`) gegen 5 Testfälle.
-- Items mit leerem expected-Feld werden übersprungen, nicht 0.0.
+- Smoke-Run pro Evaluator gegen 5 Testfälle.
+- Items mit leerem expected-Feld werden übersprungen.
+
+**Testfragen:** Nicht zutreffend.
 
 ---
 
@@ -641,7 +799,10 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Acceptance:** Dev-Review.
 - Filter: Score ≤ 0 + Kommentar nicht-trivial.
 - Re-Run gegen aktuelle Agent-Version.
-- Bericht besser/unverändert/schlechter, Trajectory + Guardrail laufen mit (ohne GT).
+- Bericht besser/unverändert/schlechter.
+
+**Testfragen:** Nicht zutreffend — Re-Run-Tool. **Verifikation:**
+- Bericht für Zeitraum 2026-05-06 bis 2026-05-13 (14 Negativ-Cases aus Live-Auswertung) generieren → Vergleich gegen aktuelle Version sichtbar.
 
 ---
 
@@ -650,21 +811,26 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** unassigned · **Typ:** Story
 
 **Schritte:**
-1. Test-Confluence-Seite mit PDF-, DOCX-, XLSX-, PPTX-, PNG-, JPG-Attachment anlegen, je mit eindeutigem Faktum.
-2. Frage zu Inhalt aus PDF stellen → Antwort + Link.
-3. Frage zu Tabellenwert aus XLSX (multimodales Verständnis).
-4. Frage zu Inhalt aus PNG (Text auf Bild).
-5. Negative: MP4/ZIP-Attachment hochladen → darf nicht indiziert werden.
-6. ACL-Test: User ohne Leseberechtigung fragt nach Inhalt → kein Treffer.
+1. Test-Confluence-Seite mit Multi-Format-Attachments.
+2. Frage pro Format.
+3. Negative: ignorierte Formate.
+4. ACL-Test.
+
+**Testfragen** (nach Anlegen einer Test-Confluence-Seite mit Attachments):
+- „Was steht im angehängten PDF auf der Seite [X]?"
+- „Welcher Wert steht in der Excel-Tabelle in der Zeile [Y]?"
+- „Was zeigt das Bild im Sales-Bereich (Datei [name].png)?"
+- „Fasse die wichtigsten Punkte aus der Präsentation [name].pptx zusammen."
+- „Was steht im DOCX [name]?"
+- *Negative:* „Was ist im MP4-Video [name].mp4?" → Tool ignoriert / kein Treffer.
+- *ACL:* mit User ohne Leseberechtigung dieselbe Frage → kein Treffer.
 
 **Erwartet:**
 - Inhalte korrekt extrahiert (Docling).
 - Link zur Original-Datei in Antwort.
-- Ignorierte Formate werden nicht zurückgegriffen.
+- Ignorierte Formate werden nicht aufgegriffen.
 
-**Verifikation:**
-- Dagster-Pipeline-Lauf-Log (nächtlicher Sync).
-- Object-Storage-Eintrag in STACKIT.
+**Verifikation:** Dagster-Pipeline-Log, Object-Storage-Eintrag in STACKIT.
 
 ---
 
@@ -676,8 +842,13 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 **Assignee:** Stocklassa, Eric (MF) · **Typ:** Bug
 
 **Nachtest empfohlen:**
-- Generierende Antwort starten → Stop-Button drücken → Feedback-Buttons sichtbar.
-- 👎 + Kommentar abschicken → in Langfuse als Score-Eintrag verifiziert.
+
+**Testfragen** (Antwort gezielt lang machen, um Stop sinnvoll zu treffen):
+- „Plane mir einen kompletten Tag im Europa-Park mit allen Highlights, Pausen und Restaurantempfehlungen."
+- „Erstelle einen 7-Tages-Reiseplan für eine Familie mit 2 Kindern (Park + Rulantica + Umgebung)."
+- „Erkläre mir ausführlich, wie der Park entstanden ist."
+
+Während der Generierung **Stop drücken** → Feedback-Buttons müssen sichtbar sein → 👎 + Kommentar abschicken → in Langfuse als Score-Eintrag verifizieren.
 
 ---
 
@@ -697,7 +868,7 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 
 **Vor Sprint-Review klären:**
 - KI-224 + KI-180: AC fehlen → vor Acceptance einfordern.
-- KI-261 / KI-256 / KI-259 / KI-237 / KI-234 / KI-231 / KI-225 / KI-141 / KI-193 / KI-167: AC stark technisch. Reformulierung aus User-Sicht empfohlen (siehe AC-Compliance-Check). Reformulierungen liegen aus früherer Session vor (für KI-265/267/268/270 — analog für die anderen aus dieser Liste vorbereitbar).
+- KI-261 / KI-256 / KI-259 / KI-237 / KI-234 / KI-231 / KI-225 / KI-141 / KI-193 / KI-167: AC stark technisch. Reformulierung aus User-Sicht empfohlen (siehe AC-Compliance-Check).
 - KI-150/151/152/153/154/155/156/157/172/180/181/225 / KI-231 / KI-158: Typ-Wechsel „Story → Aufgabe" erwägen (User-Story-Regel sonst nicht anwendbar).
 
 **Test-Reihenfolge im Sprint-Review (= Reihenfolge dieses Dokuments):**
@@ -707,3 +878,8 @@ Gegen `feedback_user_stories.md` (keine Tech-Details in Story/AC, strikt User-Si
 4. **To Do** (14): nur Vorbereitung, finale Annahme nach Implementierung.
 5. **Done** (1): KI-145 Nachtest.
 6. **Declined** (1): KI-232 — überspringen.
+
+**Hinweise zu den Testfragen:**
+- Klar-PII in den Testfragen (KI-234) ist fiktiv — IBAN und Adresse aus Beispiel-Datenbanken, nicht von realen Personen.
+- Zeitabhängige Testfragen (KI-265, KI-254) erfordern den richtigen Tagesabschnitt — alternativ Systemzeit manipulieren oder Trace-Replay verwenden.
+- Live-Testfragen, die externe Tools auslösen (KI-248 web_search), erzeugen echte Anfragen — sparsam und mit Bedacht testen.
