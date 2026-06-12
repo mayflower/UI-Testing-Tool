@@ -13,7 +13,9 @@
                 var prefersDark = globalThis.matchMedia && globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
                 var theme = saved || (prefersDark ? "dark" : "light");
                 document.documentElement.dataset.theme = theme;
-            } catch (e) {}
+            } catch (e) {
+                // localStorage/matchMedia nicht verfuegbar (Private-Mode, alte Browser) – Default-Theme greift via CSS
+            }
         })();
     </script>
 </head>

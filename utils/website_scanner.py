@@ -496,6 +496,70 @@ class WebsiteScanner:
     # ------------------------------------------------------------------
     # SEO
     # ------------------------------------------------------------------
+    def _check_seo_title(self, title: str | None, length: int) -> None:
+        if not title:
+            self._add("seo", "title", "failed", "serious", "Kein <title> Tag gefunden")
+        elif 30 <= length <= 60:
+            self._add("seo", "title", "passed", "info",
+                      f"Title vorhanden ({length} Zeichen): {title}")
+        else:
+            self._add("seo", "title", "warning", "moderate",
+                      f"Title-Länge suboptimal ({length} Zeichen, ideal: 30-60): {title}")
+
+    def _check_seo_meta_description(self, desc: str | None, length: int) -> None:
+        if not desc:
+            self._add("seo", "meta_description", "failed", "serious",
+                      "Keine Meta-Description gefunden")
+        elif 120 <= length <= 160:
+            self._add("seo", "meta_description", "passed", "info",
+                      f"Meta-Description vorhanden ({length} Zeichen)")
+        else:
+            self._add("seo", "meta_description", "warning", "moderate",
+                      f"Meta-Description Länge suboptimal ({length} Zeichen, ideal: 120-160)")
+
+    def _check_seo_canonical(self, canonical: str | None) -> None:
+        if canonical:
+            self._add("seo", "canonical", "passed", "info", f"Canonical URL: {canonical}")
+        else:
+            self._add("seo", "canonical", "warning", "moderate", "Kein Canonical-Link gefunden")
+
+    def _check_seo_open_graph(self, og_fields: dict) -> None:
+        missing = [k for k, v in og_fields.items() if not v]
+        if not missing:
+            self._add("seo", "open_graph", "passed", "info", "Alle Open-Graph Tags vorhanden")
+        else:
+            self._add("seo", "open_graph", "warning", "moderate",
+                      f"Fehlende OG-Tags: {', '.join(missing)}")
+
+    def _check_seo_headings(self, h1_count: int, headings: dict) -> None:
+        if h1_count == 1:
+            self._add("seo", "h1", "passed", "info", "Genau ein H1-Tag vorhanden")
+        elif h1_count == 0:
+            self._add("seo", "h1", "failed", "serious", "Kein H1-Tag gefunden")
+        else:
+            self._add("seo", "h1", "warning", "moderate",
+                      f"{h1_count} H1-Tags gefunden (ideal: genau 1)")
+        if headings:
+            hierarchy = ", ".join(f"{k.upper()}: {v}" for k, v in sorted(headings.items()))
+            self._add("seo", "heading_structure", "info", "info",
+                      f"Heading-Struktur: {hierarchy}")
+
+    def _check_seo_images(self, total: int, missing: int) -> None:
+        if total <= 0:
+            return
+        if missing == 0:
+            self._add("seo", "img_alt", "passed", "info",
+                      f"Alle {total} Bilder haben Alt-Texte")
+        else:
+            self._add("seo", "img_alt", "failed", "serious",
+                      f"{missing} von {total} Bildern ohne Alt-Text")
+
+    def _check_seo_lang(self, lang: str | None) -> None:
+        if lang:
+            self._add("seo", "lang", "passed", "info", f"Sprach-Attribut gesetzt: {lang}")
+        else:
+            self._add("seo", "lang", "warning", "moderate", "Kein lang-Attribut auf <html>")
+
     def _check_seo(self, page, context, browser, page_label=""):
         # Sicherstellen dass SPA-Frameworks (React etc.) fertig gemountet haben
         self._wait_for_spa_hydration(page)
@@ -529,69 +593,14 @@ class WebsiteScanner:
             };
         }""")
 
-        # Title
-        if seo["title"]:
-            length = seo["titleLength"]
-            if 30 <= length <= 60:
-                self._add("seo", "title", "passed", "info", f"Title vorhanden ({length} Zeichen): {seo['title']}")
-            else:
-                self._add("seo", "title", "warning", "moderate",
-                           f"Title-Länge suboptimal ({length} Zeichen, ideal: 30-60): {seo['title']}")
-        else:
-            self._add("seo", "title", "failed", "serious", "Kein <title> Tag gefunden")
-
-        # Meta Description
-        if seo["description"]:
-            length = seo["descLength"]
-            if 120 <= length <= 160:
-                self._add("seo", "meta_description", "passed", "info",
-                           f"Meta-Description vorhanden ({length} Zeichen)")
-            else:
-                self._add("seo", "meta_description", "warning", "moderate",
-                           f"Meta-Description Länge suboptimal ({length} Zeichen, ideal: 120-160)")
-        else:
-            self._add("seo", "meta_description", "failed", "serious", "Keine Meta-Description gefunden")
-
-        # Canonical
-        if seo["canonical"]:
-            self._add("seo", "canonical", "passed", "info", f"Canonical URL: {seo['canonical']}")
-        else:
-            self._add("seo", "canonical", "warning", "moderate", "Kein Canonical-Link gefunden")
-
-        # Open Graph
-        og_fields = {"og:title": seo["ogTitle"], "og:description": seo["ogDescription"], "og:image": seo["ogImage"]}
-        missing_og = [k for k, v in og_fields.items() if not v]
-        if not missing_og:
-            self._add("seo", "open_graph", "passed", "info", "Alle Open-Graph Tags vorhanden")
-        else:
-            self._add("seo", "open_graph", "warning", "moderate",
-                       f"Fehlende OG-Tags: {', '.join(missing_og)}")
-
-        # Headings
-        h1 = seo["h1Count"]
-        if h1 == 1:
-            self._add("seo", "h1", "passed", "info", "Genau ein H1-Tag vorhanden")
-        elif h1 == 0:
-            self._add("seo", "h1", "failed", "serious", "Kein H1-Tag gefunden")
-        else:
-            self._add("seo", "h1", "warning", "moderate", f"{h1} H1-Tags gefunden (ideal: genau 1)")
-
-        if seo["headings"]:
-            hierarchy = ", ".join(f"{k.upper()}: {v}" for k, v in sorted(seo["headings"].items()))
-            self._add("seo", "heading_structure", "info", "info", f"Heading-Struktur: {hierarchy}")
-
-        # Alt-Texte
-        if seo["totalImages"] > 0:
-            missing = seo["missingAlt"]
-            if missing == 0:
-                self._add("seo", "img_alt", "passed", "info",
-                           f"Alle {seo['totalImages']} Bilder haben Alt-Texte")
-            else:
-                self._add("seo", "img_alt", "failed", "serious",
-                           f"{missing} von {seo['totalImages']} Bildern ohne Alt-Text")
-
-        # Lang-Attribut
-        if seo["lang"]:
-            self._add("seo", "lang", "passed", "info", f"Sprach-Attribut gesetzt: {seo['lang']}")
-        else:
-            self._add("seo", "lang", "warning", "moderate", "Kein lang-Attribut auf <html>")
+        self._check_seo_title(seo["title"], seo["titleLength"])
+        self._check_seo_meta_description(seo["description"], seo["descLength"])
+        self._check_seo_canonical(seo["canonical"])
+        self._check_seo_open_graph({
+            "og:title": seo["ogTitle"],
+            "og:description": seo["ogDescription"],
+            "og:image": seo["ogImage"],
+        })
+        self._check_seo_headings(seo["h1Count"], seo["headings"])
+        self._check_seo_images(seo["totalImages"], seo["missingAlt"])
+        self._check_seo_lang(seo["lang"])

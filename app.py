@@ -480,8 +480,8 @@ def api_run_tests():
     """Starte einen neuen Testlauf."""
     data = request.get_json() or {}
     env_name = data.get("environment")
-    suite = data.get("suite")  # None = alle
-    url = (data.get("url") or "").strip() or None  # Direkte URL
+    suite = data.get("suite")  # leer: alle Suites
+    url = (data.get("url") or "").strip() or None  # direkt uebergebene URL
     login_url = (data.get("login_url") or "").strip() or None
     username = (data.get("username") or "").strip() or None
     password = (data.get("password") or "").strip() or None

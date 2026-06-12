@@ -11,6 +11,8 @@ from config.settings import SCREENSHOTS_DIR
 _LIVE_SCREENSHOT_PATH = str(SCREENSHOTS_DIR / "_live.png")
 _LIVE_SCREENSHOT_TMP = str(SCREENSHOTS_DIR / "_live.tmp.png")
 
+_LIVE_VIEW_HINT = "  (Live-Ansicht im Browser verfuegbar)"
+
 
 def _save_live_screenshot(page: Page) -> None:
     """Schreibe Live-Screenshot atomar (tmp + os.replace), damit das Frontend
@@ -246,19 +248,19 @@ def _handle_entra_mfa(page: Page, mfa_timeout: int = 120000) -> None:
         print("  MFA ERFORDERLICH - Number Matching")
         print(f"  Bitte die Zahl  >>{number}<<  in der")
         print("  Microsoft Authenticator App bestaetigen.")
-        print("  (Live-Ansicht im Browser verfuegbar)")
+        print(_LIVE_VIEW_HINT)
         print(f"{'='*50}\n")
     elif page.query_selector("input[name='otc']"):
         print(f"\n{'='*50}")
         print("  MFA ERFORDERLICH - Einmal-Code")
         print("  Bitte den Code im Browser eingeben.")
-        print("  (Live-Ansicht im Browser verfuegbar)")
+        print(_LIVE_VIEW_HINT)
         print(f"{'='*50}\n")
     else:
         print(f"\n{'='*50}")
         print("  MFA ERFORDERLICH")
         print("  Bitte Anforderung in der Authenticator App bestaetigen.")
-        print("  (Live-Ansicht im Browser verfuegbar)")
+        print(_LIVE_VIEW_HINT)
         print(f"{'='*50}\n")
 
     # Polling-Loop: Screenshot alle 500ms + MFA-Abschluss pruefen
