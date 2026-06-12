@@ -44,6 +44,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ========== Formularfelder persistieren ==========
 
+function persistLocal(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        // localStorage nicht verfuegbar (Private-Mode, Quota) - Praeferenz wird nicht persistiert
+    }
+}
+
 function saveFormFields() {
     const data = {
         url: document.getElementById("urlInput").value,
@@ -51,7 +59,7 @@ function saveFormFields() {
         username: document.getElementById("usernameInput").value,
         password: document.getElementById("passwordInput").value,
     };
-    localStorage.setItem("ep_test_form", JSON.stringify(data));
+    persistLocal("ep_test_form", JSON.stringify(data));
 }
 
 function restoreFormFields() {
@@ -956,7 +964,7 @@ function switchMode(mode) {
         const el = document.getElementById("mode-" + m);
         if (el) el.style.display = m === mode ? "block" : "none";
     });
-    localStorage.setItem("ep_test_mode", mode);
+    persistLocal("ep_test_mode", mode);
 }
 
 function scrollToHelp(id) {
@@ -1262,7 +1270,7 @@ function toggleTheme() {
     const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
     const next = cur === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
-    try { localStorage.setItem("ep_theme", next); } catch (e) {}
+    persistLocal("ep_theme", next);
     syncThemeToggleState();
 }
 
@@ -1292,7 +1300,7 @@ function addRunToHistory(run) {
     const list = getRunHistory();
     list.push({ pct: run.pct, passed: run.passed, failed: run.failed, total: run.total, ts: Date.now() });
     while (list.length > HISTORY_MAX) list.shift();
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) {}
+    persistLocal(HISTORY_KEY, JSON.stringify(list));
 }
 
 function renderAllSparklines() {
@@ -1457,7 +1465,7 @@ function getScreenshotOrder() {
 
 function saveScreenshotOrder(grid) {
     const names = Array.from(grid.querySelectorAll(".screenshot-thumb")).map(t => t.dataset.name);
-    try { localStorage.setItem(SCREENSHOT_ORDER_KEY, JSON.stringify(names)); } catch (e) {}
+    persistLocal(SCREENSHOT_ORDER_KEY, JSON.stringify(names));
 }
 
 function applyScreenshotOrder(grid) {
