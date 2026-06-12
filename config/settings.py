@@ -16,6 +16,8 @@ SCREENSHOTS_DIR = ROOT_DIR / "screenshots"
 TEMPLATES_DIR = ROOT_DIR / "templates"
 AUTH_DIR = ROOT_DIR / ".auth"
 
+_ENVIRONMENTS_YAML = "environments.yaml"
+
 # .env laden
 load_dotenv(ROOT_DIR / ".env")
 
@@ -43,7 +45,7 @@ def _load_yaml(filename: str) -> dict:
 
 def get_environments() -> dict:
     """Lade alle konfigurierten Umgebungen."""
-    data = _load_yaml("environments.yaml")
+    data = _load_yaml(_ENVIRONMENTS_YAML)
     return data.get("environments", {})
 
 
@@ -61,7 +63,7 @@ def get_environment(name: str | None = None) -> dict:
             "password": os.getenv("CHATBOT_PASSWORD", ""),
         }
 
-    envs = _load_yaml("environments.yaml")
+    envs = _load_yaml(_ENVIRONMENTS_YAML)
     env_name = name or os.getenv("DEFAULT_ENV") or envs.get("default", "dev")
     environments = envs.get("environments", {})
     if env_name not in environments:
@@ -76,7 +78,7 @@ def get_environment(name: str | None = None) -> dict:
 
 def save_environments(environments: dict, default: str | None = None) -> None:
     """Speichere Umgebungen in environments.yaml."""
-    path = CONFIG_DIR / "environments.yaml"
+    path = CONFIG_DIR / _ENVIRONMENTS_YAML
     data = {"environments": environments}
     if default:
         data["default"] = default

@@ -38,6 +38,8 @@ app = Flask(
 # Aktive Testläufe speichern
 test_runs: dict[str, dict] = {}
 
+_TESTRUN_NOT_FOUND = "Testlauf nicht gefunden"
+
 
 @app.route("/")
 def index():
@@ -478,7 +480,7 @@ def api_test_status(run_id):
     """Status eines Testlaufs abfragen."""
     run = test_runs.get(run_id)
     if not run:
-        return jsonify({"error": "Testlauf nicht gefunden"}), 404
+        return jsonify({"error": _TESTRUN_NOT_FOUND}), 404
 
     results = run.get("results", [])
     passed = sum(1 for r in results if r["outcome"] == "passed")
@@ -510,7 +512,7 @@ def api_cancel_tests(run_id):
     """Laufenden Testlauf abbrechen."""
     run = test_runs.get(run_id)
     if not run:
-        return jsonify({"error": "Testlauf nicht gefunden"}), 404
+        return jsonify({"error": _TESTRUN_NOT_FOUND}), 404
 
     if run["status"] != "running":
         return jsonify({"error": "Testlauf laeuft nicht"}), 400
@@ -654,7 +656,7 @@ def api_jira_create_tickets():
 
     run = test_runs.get(run_id)
     if not run:
-        return jsonify({"ok": False, "error": "Testlauf nicht gefunden"}), 404
+        return jsonify({"ok": False, "error": _TESTRUN_NOT_FOUND}), 404
 
     results = run.get("results", [])
     selected_tests = data.get("selected_tests")  # Liste von Display-Namen oder None
@@ -858,7 +860,8 @@ def main():
     print("  http://localhost:5000")
     print("=" * 60)
     debug = os.environ.get("FLASK_ENV") != "production"
-    app.run(debug=debug, host="0.0.0.0", port=5000)
+    host = os.environ.get("HOST", "127.0.0.1")
+    app.run(debug=debug, host=host, port=5000)
 
 
 if __name__ == "__main__":

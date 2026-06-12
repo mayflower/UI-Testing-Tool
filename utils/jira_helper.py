@@ -17,6 +17,8 @@ from config.settings import get_jira_config
 # Cache fuer erkannte API-Version (pro base_url)
 _api_version_cache: dict[str, int] = {}
 
+_JSON_MIME = "application/json"
+
 
 def _is_server(config: dict) -> bool:
     """Pruefe ob es sich um Jira Server/DC handelt (API v2)."""
@@ -35,8 +37,8 @@ def _headers(config: dict) -> dict:
         raise ValueError("Jira API-Token ist erforderlich.")
 
     base = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
+        "Content-Type": _JSON_MIME,
+        "Accept": _JSON_MIME,
     }
 
     if _is_server(config):
@@ -72,7 +74,7 @@ def _detect_api_version(config: dict) -> int:
             f"{base}/rest/api/2/serverInfo",
             headers={
                 "Authorization": f"Bearer {token}",
-                "Accept": "application/json",
+                "Accept": _JSON_MIME,
             },
             timeout=10,
         )

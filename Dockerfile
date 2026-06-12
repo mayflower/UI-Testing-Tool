@@ -38,6 +38,7 @@ RUN playwright install chromium
 
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
+ENV HOST=0.0.0.0
 
 EXPOSE 5000
 
