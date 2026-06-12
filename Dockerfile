@@ -33,9 +33,10 @@ COPY templates/ ./templates/
 COPY static/ ./static/
 
 # Nur echte Laufzeit-Verzeichnisse beschreibbar machen:
-# config/ wird von der Settings-UI beschrieben (environments/selectors/jira.yaml)
-RUN mkdir -p reports screenshots /home/appuser/.cache \
-    && chown -R appuser:appuser config reports screenshots /home/appuser/.cache
+# config/ wird von der Settings-UI beschrieben (environments/selectors/jira.yaml),
+# .auth/ haelt Playwright-Login-States (conftest.py)
+RUN mkdir -p reports screenshots .auth /home/appuser/.cache \
+    && chown -R appuser:appuser config reports screenshots .auth /home/appuser/.cache
 
 USER appuser
 
