@@ -329,9 +329,7 @@ def _run_tests_worker(
         run.pop("_proc", None)
 
 
-_TEST_LINE_RE = re.compile(
-    r"^(tests/\S+::\S+)\s+(PASSED|FAILED|SKIPPED|ERROR)"
-)
+_TEST_OUTCOMES = ("PASSED", "FAILED", "SKIPPED", "ERROR")
 
 
 def _parse_test_line(run: dict, line: str):
@@ -343,12 +341,13 @@ def _parse_test_line(run: dict, line: str):
     Ignoriert Short-Test-Summary-Zeilen (z.B. 'FAILED tests/...' oder
     'ERROR tests/...') wo das Keyword am Zeilenanfang steht.
     """
-    match = _TEST_LINE_RE.match(line.strip())
-    if not match:
+    tokens = line.strip().split()
+    if len(tokens) < 2 or tokens[1] not in _TEST_OUTCOMES:
         return
-
-    test_path = match.group(1)  # z.B. tests/ui/test_file.py::TestClass::test_method
-    outcome = match.group(2).lower()  # passed, failed, skipped, error
+    test_path = tokens[0]  # z.B. tests/ui/test_file.py::TestClass::test_method
+    if not test_path.startswith("tests/") or "::" not in test_path:
+        return
+    outcome = tokens[1].lower()  # passed, failed, skipped, error
 
     # Testname = letzter Teil nach ::
     parts = test_path.split("::")
