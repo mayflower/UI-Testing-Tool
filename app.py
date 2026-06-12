@@ -194,6 +194,79 @@ def live_browser():
     return response
 
 
+_SUITE_PATH_MAP = {
+    "ui": "tests/ui/",
+    "ux": "tests/ux/",
+    "a11y": "tests/a11y/",
+    "flows": "tests/ux/test_chatbot_flows.py",
+}
+
+
+def _build_pytest_command(env_name: str, suite: str | None) -> list[str]:
+    cmd = [
+        sys.executable, "-m", "pytest",
+        "-v", "--tb=short",
+        "--override-ini=addopts=",
+    ]
+    if env_name:
+        cmd.extend(["--env", env_name])
+    suite_path = _SUITE_PATH_MAP.get(suite or "")
+    if suite_path:
+        cmd.append(suite_path)
+    return cmd
+
+
+def _build_pytest_env(
+    url: str | None,
+    login_url: str | None,
+    username: str | None,
+    password: str | None,
+) -> dict:
+    env = dict(os.environ)
+    for key, value in (
+        ("CHATBOT_URL", url),
+        ("CHATBOT_LOGIN_URL", login_url),
+        ("CHATBOT_USERNAME", username),
+        ("CHATBOT_PASSWORD", password),
+    ):
+        if value:
+            env[key] = value
+    return env
+
+
+def _cancel_subprocess(proc: subprocess.Popen) -> None:
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def _consume_pytest_output(run: dict, proc: subprocess.Popen) -> list[str] | None:
+    """Iteriere stdout, parse Ergebnisse. Gibt None zurueck bei Cancel."""
+    output_lines: list[str] = []
+    for line in proc.stdout:
+        if run.get("_cancel"):
+            _cancel_subprocess(proc)
+            run["status"] = "cancelled"
+            run["finished_at"] = datetime.now().isoformat()
+            return None
+
+        line = line.rstrip()
+        output_lines.append(line)
+        run["output"] = output_lines
+        if "::" in line:
+            _parse_test_line(run, line)
+    return output_lines
+
+
+def _attach_error_messages(run: dict, output_lines: list[str]) -> None:
+    error_messages = _extract_error_messages(output_lines)
+    for r in run.get("results", []):
+        if r["outcome"] in ("failed", "error") and not r.get("message"):
+            r["message"] = error_messages.get(r["name"], "")
+
+
 def _run_tests_worker(
     run_id: str,
     env_name: str,
@@ -208,35 +281,8 @@ def _run_tests_worker(
     run["status"] = "running"
     run["started_at"] = datetime.now().isoformat()
 
-    cmd = [
-        sys.executable, "-m", "pytest",
-        "-v", "--tb=short",
-        "--override-ini=addopts=",
-    ]
-
-    if env_name:
-        cmd.extend(["--env", env_name])
-
-    if suite:
-        suite_map = {
-            "ui": "tests/ui/",
-            "ux": "tests/ux/",
-            "a11y": "tests/a11y/",
-            "flows": "tests/ux/test_chatbot_flows.py",
-        }
-        if suite in suite_map:
-            cmd.append(suite_map[suite])
-
-    # Umgebungsvariablen für den Subprozess
-    env = dict(os.environ)
-    if url:
-        env["CHATBOT_URL"] = url
-    if login_url:
-        env["CHATBOT_LOGIN_URL"] = login_url
-    if username:
-        env["CHATBOT_USERNAME"] = username
-    if password:
-        env["CHATBOT_PASSWORD"] = password
+    cmd = _build_pytest_command(env_name, suite)
+    env = _build_pytest_env(url, login_url, username, password)
 
     try:
         proc = subprocess.Popen(
@@ -249,39 +295,16 @@ def _run_tests_worker(
         )
         run["_proc"] = proc
 
-        output_lines = []
-        for line in proc.stdout:
-            # Abbruch prüfen
-            if run.get("_cancel"):
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                run["status"] = "cancelled"
-                run["finished_at"] = datetime.now().isoformat()
-                return
-
-            line = line.rstrip()
-            output_lines.append(line)
-            run["output"] = output_lines
-
-            # Testergebnisse parsen (Regex in _parse_test_line filtert selbst)
-            if "::" in line:
-                _parse_test_line(run, line)
+        output_lines = _consume_pytest_output(run, proc)
+        if output_lines is None:
+            return  # cancelled
 
         proc.wait()
         run["exit_code"] = proc.returncode
         run["status"] = "completed"
         run["finished_at"] = datetime.now().isoformat()
 
-        # Fehlermeldungen aus pytest-Output extrahieren und den Ergebnissen zuordnen
-        error_messages = _extract_error_messages(output_lines)
-        for r in run.get("results", []):
-            if r["outcome"] in ("failed", "error") and not r.get("message"):
-                r["message"] = error_messages.get(r["name"], "")
-
-        # Report generieren
+        _attach_error_messages(run, output_lines)
         _generate_report_for_run(run, env_name, suite, url)
 
     except Exception as e:
@@ -332,6 +355,28 @@ def _parse_test_line(run: dict, line: str):
     })
 
 
+_FAILURE_HEADER_RE = re.compile(r"^_+ (.+?) _+$")
+_SETUP_ERROR_PREFIX_RE = re.compile(r"^ERROR at (?:setup|teardown) of ")
+
+
+def _is_failures_section_start(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("=") and ("FAILURES" in line or "ERRORS" in line)
+
+
+def _is_failures_section_end(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("=") and "short test summary" in line
+
+
+def _parse_failure_header(line: str) -> str | None:
+    match = _FAILURE_HEADER_RE.match(line.strip())
+    if not match:
+        return None
+    header_text = _SETUP_ERROR_PREFIX_RE.sub("", match.group(1))
+    return header_text.split(".")[-1] if "." in header_text else header_text
+
+
 def _extract_error_messages(output_lines: list[str]) -> dict[str, str]:
     """Extrahiere Fehlermeldungen aus dem pytest-Output.
 
@@ -342,46 +387,33 @@ def _extract_error_messages(output_lines: list[str]) -> dict[str, str]:
         Dict {test_name: fehlermeldung}
     """
     errors: dict[str, str] = {}
-    current_test = None
+    current_test: str | None = None
     current_lines: list[str] = []
     in_failures = False
 
+    def _flush():
+        if current_test and current_lines:
+            errors[current_test] = _clean_error_block(current_lines)
+
     for line in output_lines:
-        # Beginn der FAILURES/ERRORS Sektion
-        if line.strip().startswith("=") and ("FAILURES" in line or "ERRORS" in line):
+        if _is_failures_section_start(line):
             in_failures = True
             continue
-
-        # Ende der Sektion (naechste ===... Zeile)
-        if in_failures and line.strip().startswith("=") and "short test summary" in line:
-            # Letzten Test speichern
-            if current_test and current_lines:
-                errors[current_test] = _clean_error_block(current_lines)
-            break
-
         if not in_failures:
             continue
+        if _is_failures_section_end(line):
+            _flush()
+            break
 
-        # Neuer Test-Header: ___ TestClass.test_name ___
-        header_match = re.match(r"^_+ (.+?) _+$", line.strip())
-        if header_match:
-            # Vorherigen Test speichern
-            if current_test and current_lines:
-                errors[current_test] = _clean_error_block(current_lines)
-            # Neuen Test starten
-            header_text = header_match.group(1)
-            # "ERROR at setup of TestClass.test_name" oder "TestClass.test_name"
-            header_text = re.sub(r"^ERROR at (?:setup|teardown) of ", "", header_text)
-            # Testname ist der letzte Teil nach dem Punkt
-            current_test = header_text.split(".")[-1] if "." in header_text else header_text
+        header_name = _parse_failure_header(line)
+        if header_name is not None:
+            _flush()
+            current_test = header_name
             current_lines = []
         elif current_test:
             current_lines.append(line)
 
-    # Letzten Block speichern falls Schleife ohne break endet
-    if current_test and current_lines:
-        errors[current_test] = _clean_error_block(current_lines)
-
+    _flush()
     return errors
 
 
@@ -557,6 +589,15 @@ def api_test_stream(run_id):
     return Response(generate(), mimetype="text/event-stream")
 
 
+def _merge_discovered_selectors(found: dict) -> dict:
+    """Nur nicht-None-Werte ueberschreiben den bestehenden Selektor-Stand."""
+    merged = dict(get_selectors())
+    for key, value in found.items():
+        if value is not None:
+            merged[key] = value
+    return merged
+
+
 @app.route("/api/discovery/run", methods=["POST"])
 def api_run_discovery():
     """Starte Selektor-Discovery."""
@@ -581,12 +622,7 @@ def api_run_discovery():
             result = discover_selectors(env_name)
 
         if result and result.get("selectors"):
-            # Merge: nur gefundene Selektoren ueberschreiben, null-Werte behalten
-            existing = get_selectors()
-            merged = dict(existing)
-            for key, value in result["selectors"].items():
-                if value is not None:
-                    merged[key] = value
+            merged = _merge_discovered_selectors(result["selectors"])
             save_selectors(merged)
             result["selectors"] = merged
         return jsonify(result)
@@ -762,6 +798,31 @@ def api_website_scan_run():
     return jsonify({"run_id": run_id})
 
 
+def _website_scan_current_results(run: dict) -> list:
+    scanner = run.get("_scanner")
+    if scanner:
+        return scanner.results
+    return run.get("results", [])
+
+
+def _website_scan_done_payload(run: dict) -> str:
+    results = _website_scan_current_results(run)
+    passed = sum(1 for r in results if r["status"] == "passed")
+    failed = sum(1 for r in results if r["status"] == "failed")
+    warnings = sum(1 for r in results if r["status"] == "warning")
+    return json.dumps({
+        "type": "done",
+        "data": {
+            "status": run["status"],
+            "passed": passed,
+            "failed": failed,
+            "warnings": warnings,
+            "total": len(results),
+            "report": run.get("report"),
+        },
+    })
+
+
 @app.route("/api/website-scan/stream/<run_id>")
 def api_website_scan_stream(run_id):
     """SSE-Stream für Website-Scan Live-Updates."""
@@ -773,21 +834,14 @@ def api_website_scan_stream(run_id):
                 yield f"data: {json.dumps({'error': 'not found'})}\n\n"
                 break
 
-            scanner = run.get("_scanner")
-            results = scanner.results if scanner else run.get("results", [])
-
+            results = _website_scan_current_results(run)
             if len(results) > last_count:
                 for r in results[last_count:]:
                     yield f"data: {json.dumps({'type': 'result', 'data': r})}\n\n"
                 last_count = len(results)
 
             if run["status"] in ("completed", "error", "cancelled"):
-                # Finale Ergebnisse sicherstellen
-                results = run.get("results", []) if not scanner else scanner.results
-                passed = sum(1 for r in results if r["status"] == "passed")
-                failed = sum(1 for r in results if r["status"] == "failed")
-                warnings = sum(1 for r in results if r["status"] == "warning")
-                yield f"data: {json.dumps({'type': 'done', 'data': {'status': run['status'], 'passed': passed, 'failed': failed, 'warnings': warnings, 'total': len(results), 'report': run.get('report')}})}\n\n"
+                yield f"data: {_website_scan_done_payload(run)}\n\n"
                 break
 
             time.sleep(0.5)

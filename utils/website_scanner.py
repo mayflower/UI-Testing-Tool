@@ -184,6 +184,51 @@ class WebsiteScanner:
                               f"Fehler bei {check_name}: {e}")
         self._current_page_label = ""
 
+    def _open_target_page(self, page) -> bool:
+        """Login + Navigation + SPA-Hydration. Gibt False bei Fehler zurueck."""
+        try:
+            if self.login_url:
+                self._perform_login(page)
+
+            page.goto(self.url, wait_until="domcontentloaded", timeout=60000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=15000)
+            except Exception:
+                pass  # Seiten mit Websockets/Polling werden nie "idle"
+            self._wait_for_spa_hydration(page)
+
+            # Falls kein separater Login-URL aber Credentials vorhanden,
+            # pruefe ob auf der Zielseite ein Login-Formular ist
+            if not self.login_url and self.username:
+                self._perform_login(page)
+
+            self._take_screenshot(page, "startseite", "Startseite")
+            return True
+        except Exception as e:
+            self._add("general", "page_load", "failed", "critical",
+                      f"Seite konnte nicht geladen werden: {e}")
+            self.status = "error"
+            return False
+
+    def _navigate_after_pre_actions(self, page) -> None:
+        try:
+            self._execute_pre_actions(page)
+            try:
+                page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                pass
+            self._wait_for_spa_hydration(page)
+            self._take_screenshot(page, "nach_aktionen", "Nach Vor-Aktionen")
+        except Exception as e:
+            self._add("general", "pre_action_navigate", "failed", "serious",
+                      f"Navigation nach Vor-Aktionen fehlgeschlagen: {e}")
+
+    def _scan_multi_page(self, page, context, browser, dispatch) -> None:
+        self._run_checks(page, context, browser, dispatch, page_label="Startseite")
+        self._navigate_after_pre_actions(page)
+        page_label = urlparse(page.url).path.strip("/") or "Folgeseite"
+        self._run_checks(page, context, browser, dispatch, page_label=page_label)
+
     def run(self):
         """Führe alle ausgewählten Checks aus."""
         self.status = "running"
@@ -198,57 +243,14 @@ class WebsiteScanner:
             browser = p.chromium.launch(headless=HEADLESS, slow_mo=SLOW_MO)
             context = browser.new_context(viewport={"width": 1440, "height": 900}, locale="de-DE")
             page = context.new_page()
-            try:
-                # Login falls konfiguriert
-                if self.login_url:
-                    self._perform_login(page)
 
-                page.goto(self.url, wait_until="domcontentloaded", timeout=60000)
-                try:
-                    page.wait_for_load_state("networkidle", timeout=15000)
-                except Exception:
-                    pass  # Seiten mit Websockets/Polling werden nie "idle"
-                # Warten auf SPA-Hydration (React, Vue, etc.)
-                self._wait_for_spa_hydration(page)
-
-                # Falls kein separater Login-URL aber Credentials vorhanden:
-                # prüfe ob auf der Zielseite ein Login-Formular ist
-                if not self.login_url and self.username:
-                    self._perform_login(page)
-
-                # Screenshot der Startseite
-                self._take_screenshot(page, "startseite", "Startseite")
-
-            except Exception as e:
-                self._add("general", "page_load", "failed", "critical",
-                          f"Seite konnte nicht geladen werden: {e}")
-                self.status = "error"
+            if not self._open_target_page(page):
                 browser.close()
                 return
 
             if self.pre_actions:
-                # === Seite 1: Startseite scannen ===
-                self._run_checks(page, context, browser, dispatch, page_label="Startseite")
-
-                # === Vor-Aktionen ausführen → Seite 2 ===
-                try:
-                    self._execute_pre_actions(page)
-                    try:
-                        page.wait_for_load_state("networkidle", timeout=10000)
-                    except Exception:
-                        pass
-                    self._wait_for_spa_hydration(page)
-                    self._take_screenshot(page, "nach_aktionen", "Nach Vor-Aktionen")
-                except Exception as e:
-                    self._add("general", "pre_action_navigate", "failed", "serious",
-                              f"Navigation nach Vor-Aktionen fehlgeschlagen: {e}")
-
-                # === Seite 2: Folgeseite scannen ===
-                current_url = page.url
-                page_label = urlparse(current_url).path.strip("/") or "Folgeseite"
-                self._run_checks(page, context, browser, dispatch, page_label=page_label)
+                self._scan_multi_page(page, context, browser, dispatch)
             else:
-                # Nur eine Seite — kein Label nötig
                 self._run_checks(page, context, browser, dispatch)
 
             if self.status == "running":
@@ -393,6 +395,35 @@ class WebsiteScanner:
     # ------------------------------------------------------------------
     # Broken Links
     # ------------------------------------------------------------------
+    def _probe_urls_concurrent(self, urls: list) -> tuple[int, list]:
+        """HEAD-Probe paralleler URLs. Gibt (checked, broken) zurueck."""
+        def check_url(url):
+            try:
+                r = requests.head(url, timeout=10, allow_redirects=True,
+                                  headers={"User-Agent": "Mozilla/5.0 WebsiteScanner"})
+                return url, r.status_code
+            except requests.RequestException:
+                return url, 0
+
+        broken = []
+        checked = 0
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            futures = {pool.submit(check_url, u): u for u in urls}
+            for future in as_completed(futures):
+                if self._cancel:
+                    break
+                url_checked, status_code = future.result()
+                checked += 1
+                if status_code >= 400 or status_code == 0:
+                    broken.append((url_checked, status_code))
+        return checked, broken
+
+    def _report_broken_links(self, broken: list) -> None:
+        for url_b, code in broken[:20]:  # Max 20 anzeigen
+            label = f"HTTP {code}" if code else "Nicht erreichbar"
+            self._add("links", "broken_link", "failed", "serious",
+                      f"{label}: {url_b}", url=url_b, status_code=code)
+
     def _check_links(self, page, context, browser, page_label=""):
         urls = page.evaluate("""() => {
             const links = new Set();
@@ -409,39 +440,19 @@ class WebsiteScanner:
             self._add("links", "no_links", "passed", "info", "Keine Links auf der Seite gefunden")
             return
 
-        broken = []
-        checked = 0
-
-        def check_url(url):
-            try:
-                r = requests.head(url, timeout=10, allow_redirects=True,
-                                  headers={"User-Agent": "Mozilla/5.0 WebsiteScanner"})
-                return url, r.status_code
-            except requests.RequestException:
-                return url, 0
-
-        with ThreadPoolExecutor(max_workers=10) as pool:
-            futures = {pool.submit(check_url, u): u for u in urls[:100]}  # Max 100 Links
-            for future in as_completed(futures):
-                if self._cancel:
-                    return
-                url_checked, status_code = future.result()
-                checked += 1
-                if status_code >= 400 or status_code == 0:
-                    broken.append((url_checked, status_code))
+        checked, broken = self._probe_urls_concurrent(urls[:100])
+        if self._cancel:
+            return
 
         if broken:
-            for url_b, code in broken[:20]:  # Max 20 anzeigen
-                label = f"HTTP {code}" if code else "Nicht erreichbar"
-                self._add("links", "broken_link", "failed", "serious",
-                           f"{label}: {url_b}", url=url_b, status_code=code)
+            self._report_broken_links(broken)
         else:
             self._add("links", "all_links_ok", "passed", "info",
-                       f"Alle {checked} Links sind erreichbar")
+                      f"Alle {checked} Links sind erreichbar")
 
         self._add("links", "link_summary", "info", "info",
-                   f"{checked} Links geprüft, {len(broken)} fehlerhaft",
-                   total=checked, broken=len(broken))
+                  f"{checked} Links geprüft, {len(broken)} fehlerhaft",
+                  total=checked, broken=len(broken))
 
     # ------------------------------------------------------------------
     # Responsive

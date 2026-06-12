@@ -295,46 +295,50 @@ def _find_bot_message_by_content(page: Page, msg_list_sel: str | None) -> dict |
         return None
 
 
+def _build_best_selector(
+    selector: str, tag: str, element_id: str, classes: str | None
+) -> str:
+    """Waehle den eindeutigsten Selektor aus Pattern + Element-Metadaten.
+
+    Patterns mit strukturellen Pseudo-Klassen (z.B. :last-child) NICHT auf
+    tag.class reduzieren — die Pseudo-Klasse traegt die Eindeutigkeit.
+    """
+    if _STRUCTURAL_PSEUDO_RE.search(selector):
+        return selector
+    if element_id:
+        return f"#{element_id}"
+    if classes and isinstance(classes, str):
+        stable = _pick_stable_class(classes)
+        if stable:
+            return f"{tag}.{stable}"
+    return selector
+
+
 def _find_element(page: Page, patterns: list[str]) -> dict | None:
     """Suche ein Element anhand einer Liste von CSS-Selektoren."""
     for selector in patterns:
         try:
             elements = page.query_selector_all(selector)
-            if elements:
-                el = elements[0]
-                tag = el.evaluate("el => el.tagName.toLowerCase()")
-                classes = el.evaluate("el => el.className")
-                element_id = el.evaluate("el => el.id")
-                text = el.evaluate("el => el.textContent?.trim()?.substring(0, 50) || ''")
-
-                # Baue einen eindeutigen Selektor.
-                # Patterns mit strukturellen Pseudo-Klassen (z.B. :last-child)
-                # NICHT auf tag.class reduzieren — die Pseudo-Klasse trägt die
-                # Eindeutigkeit, ohne sie würde der Selektor mehrere Elemente matchen.
-                if _STRUCTURAL_PSEUDO_RE.search(selector):
-                    best_selector = selector
-                elif element_id:
-                    best_selector = f"#{element_id}"
-                elif classes and isinstance(classes, str):
-                    stable = _pick_stable_class(classes)
-                    if stable:
-                        best_selector = f"{tag}.{stable}"
-                    else:
-                        best_selector = selector
-                else:
-                    best_selector = selector
-
-                return {
-                    "selector": best_selector,
-                    "matched_pattern": selector,
-                    "tag": tag,
-                    "id": element_id,
-                    "classes": classes,
-                    "text_preview": text,
-                    "count": len(elements),
-                }
         except Exception:
             continue
+        if not elements:
+            continue
+
+        el = elements[0]
+        tag = el.evaluate("el => el.tagName.toLowerCase()")
+        classes = el.evaluate("el => el.className")
+        element_id = el.evaluate("el => el.id")
+        text = el.evaluate("el => el.textContent?.trim()?.substring(0, 50) || ''")
+
+        return {
+            "selector": _build_best_selector(selector, tag, element_id, classes),
+            "matched_pattern": selector,
+            "tag": tag,
+            "id": element_id,
+            "classes": classes,
+            "text_preview": text,
+            "count": len(elements),
+        }
     return None
 
 
@@ -376,6 +380,114 @@ def discover_selectors(env_name: str | None = None) -> dict:
     )
 
 
+def _login_separate_page(
+    page: Page, login_url: str, username: str, password: str
+) -> str | None:
+    """Login auf separater Login-Seite. Gibt Fehlermeldung zurueck oder None."""
+    try:
+        print(f"   🔐 Login auf: {login_url}")
+        perform_login(page, login_url, username, password)
+        print("   ✅ Login erfolgreich\n")
+        return None
+    except Exception as e:
+        print(f"   ❌ Login fehlgeschlagen: {e}")
+        return f"Login fehlgeschlagen: {e}"
+
+
+def _login_on_redirect(
+    page: Page, target_url: str, username: str, password: str
+) -> str | None:
+    try:
+        print(f"   🔐 Login auf: {page.url} (Redirect)")
+        perform_login_on_page(page, username, password)
+        print("   ✅ Login erfolgreich\n")
+        page.goto(target_url, wait_until="networkidle")
+        return None
+    except Exception as e:
+        print(f"   ❌ Login fehlgeschlagen: {e}")
+        return f"Login fehlgeschlagen: {e}"
+
+
+def _print_element_match(name: str, result: dict) -> None:
+    print(f"   ✅ {name}: {result['selector']}")
+    print(f"      Tag: <{result['tag']}>, Klassen: {result['classes']}")
+    if result["text_preview"]:
+        print(f"      Text: \"{result['text_preview']}\"")
+    print(f"      Gefunden mit Pattern: {result['matched_pattern']}")
+    print(f"      Anzahl Treffer: {result['count']}")
+
+
+def _run_initial_pattern_search(page: Page, results: dict, discovered: dict) -> None:
+    for element_name, patterns in DISCOVERY_PATTERNS.items():
+        result = _find_element(page, patterns)
+        if result:
+            results[element_name] = result
+            discovered[element_name] = result["selector"]
+            _print_element_match(element_name, result)
+        else:
+            discovered[element_name] = None
+            print(f"   ⚠️  {element_name}: nicht gefunden")
+        print()
+
+
+def _send_test_message(page: Page, input_sel: str, send_sel: str) -> None:
+    page.locator(input_sel).click()
+    page.locator(input_sel).fill("Hallo")
+    page.click(send_sel)
+    page.wait_for_timeout(8000)
+
+
+def _resolve_message_selector(
+    page: Page, msg_key: str, msg_list_sel: str | None
+) -> dict | None:
+    result = _find_element(page, DISCOVERY_PATTERNS[msg_key])
+    if result:
+        print(f"   ✅ {msg_key}: {result['selector']}")
+        return result
+    if msg_key == "bot_message":
+        print("   🔎 Versuche Content-basierte Erkennung...")
+        result = _find_bot_message_by_content(page, msg_list_sel)
+        if result:
+            print(f"   ✅ {msg_key}: {result['selector']} (Content-Fallback)")
+            print(f"      Text: \"{result['text_preview']}\"")
+            return result
+    print(f"   ⚠️  {msg_key}: auch nach Testnachricht nicht gefunden")
+    return None
+
+
+def _try_resolve_messages_via_test(
+    page: Page, results: dict, discovered: dict
+) -> None:
+    input_sel = discovered.get("input_field")
+    send_sel = discovered.get("send_button")
+    missing = not discovered.get("bot_message") or not discovered.get("user_message")
+    if not (input_sel and send_sel and missing):
+        return
+
+    print("   💬 Sende Testnachricht um Nachrichtenelemente zu finden...")
+    try:
+        _send_test_message(page, input_sel, send_sel)
+        msg_list_sel = discovered.get("message_list")
+        results["_dom_inspection"] = _inspect_message_dom(page, msg_list_sel)
+        for msg_key in ("bot_message", "user_message"):
+            if discovered.get(msg_key):
+                continue
+            result = _resolve_message_selector(page, msg_key, msg_list_sel)
+            if result:
+                results[msg_key] = result
+                discovered[msg_key] = result["selector"]
+    except Exception as e:
+        print(f"   ⚠️  Testnachricht fehlgeschlagen: {e}")
+
+
+def _save_discovery_screenshot(page: Page) -> None:
+    from config.settings import SCREENSHOTS_DIR
+    SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    screenshot_path = str(SCREENSHOTS_DIR / "discovery.png")
+    page.screenshot(path=screenshot_path, full_page=True)
+    print(f"   📸 Screenshot gespeichert: {screenshot_path}")
+
+
 def _discover_selectors_core(
     url: str,
     environment_label: str = "",
@@ -393,8 +505,8 @@ def _discover_selectors_core(
     if environment_label:
         print(f"   Umgebung: {environment_label}\n")
 
-    results = {}
-    discovered_selectors = {}
+    results: dict = {}
+    discovered_selectors: dict = {}
 
     with sync_playwright() as p:
         browser_type = getattr(p, BROWSER)
@@ -402,16 +514,11 @@ def _discover_selectors_core(
         page = browser.new_page()
         page.set_default_navigation_timeout(NAVIGATION_TIMEOUT)
 
-        # Separate Login-Seite zuerst, falls vorhanden
         if needs_login(username, password) and login_url:
-            try:
-                print(f"   🔐 Login auf: {login_url}")
-                perform_login(page, login_url, username, password)
-                print("   ✅ Login erfolgreich\n")
-            except Exception as e:
-                print(f"   ❌ Login fehlgeschlagen: {e}")
+            err = _login_separate_page(page, login_url, username, password)
+            if err:
                 browser.close()
-                return {"error": f"Login fehlgeschlagen: {e}"}
+                return {"error": err}
 
         try:
             page.goto(url, wait_until="networkidle")
@@ -420,88 +527,19 @@ def _discover_selectors_core(
             browser.close()
             return {}
 
-        # Falls wir auf einer Login-Seite gelandet sind (Redirect), einloggen
         if needs_login(username, password) and has_login_form(page, wait_seconds=15):
-            try:
-                print(f"   🔐 Login auf: {page.url} (Redirect)")
-                perform_login_on_page(page, username, password)
-                print("   ✅ Login erfolgreich\n")
-                # Nach Login nochmal zur Ziel-URL
-                page.goto(url, wait_until="networkidle")
-            except Exception as e:
-                print(f"   ❌ Login fehlgeschlagen: {e}")
+            err = _login_on_redirect(page, url, username, password)
+            if err:
                 browser.close()
-                return {"error": f"Login fehlgeschlagen: {e}"}
+                return {"error": err}
         elif needs_login(username, password):
             print(f"   ℹ️  Kein Login-Formular erkannt (URL: {page.url})")
 
-        # Warte kurz, damit dynamische Inhalte laden
         page.wait_for_timeout(2000)
 
-        for element_name, patterns in DISCOVERY_PATTERNS.items():
-            result = _find_element(page, patterns)
-            if result:
-                results[element_name] = result
-                discovered_selectors[element_name] = result["selector"]
-                print(f"   ✅ {element_name}: {result['selector']}")
-                print(f"      Tag: <{result['tag']}>, Klassen: {result['classes']}")
-                if result["text_preview"]:
-                    print(f"      Text: \"{result['text_preview']}\"")
-                print(f"      Gefunden mit Pattern: {result['matched_pattern']}")
-                print(f"      Anzahl Treffer: {result['count']}")
-            else:
-                discovered_selectors[element_name] = None
-                print(f"   ⚠️  {element_name}: nicht gefunden")
-            print()
-
-        # Falls bot_message/user_message nicht gefunden: Testnachricht senden
-        input_sel = discovered_selectors.get("input_field")
-        send_sel = discovered_selectors.get("send_button")
-        missing_msg = not discovered_selectors.get("bot_message") or not discovered_selectors.get("user_message")
-
-        if input_sel and send_sel and missing_msg:
-            print("   💬 Sende Testnachricht um Nachrichtenelemente zu finden...")
-            try:
-                page.locator(input_sel).click()
-                page.locator(input_sel).fill("Hallo")
-                page.click(send_sel)
-                page.wait_for_timeout(8000)
-
-                # DOM-Inspektion: alle Elemente im Message-Container ausgeben
-                msg_list_sel = discovered_selectors.get("message_list")
-                dom_info = _inspect_message_dom(page, msg_list_sel)
-                results["_dom_inspection"] = dom_info
-
-                # Nochmal nach Nachrichtenelementen suchen
-                for msg_key in ("bot_message", "user_message"):
-                    if not discovered_selectors.get(msg_key):
-                        result = _find_element(page, DISCOVERY_PATTERNS[msg_key])
-                        if result:
-                            results[msg_key] = result
-                            discovered_selectors[msg_key] = result["selector"]
-                            print(f"   ✅ {msg_key}: {result['selector']}")
-                        elif msg_key == "bot_message":
-                            # Content-basierter Fallback fuer bot_message
-                            print("   🔎 Versuche Content-basierte Erkennung...")
-                            result = _find_bot_message_by_content(page, msg_list_sel)
-                            if result:
-                                results[msg_key] = result
-                                discovered_selectors[msg_key] = result["selector"]
-                                print(f"   ✅ {msg_key}: {result['selector']} (Content-Fallback)")
-                                print(f"      Text: \"{result['text_preview']}\"")
-                            else:
-                                print(f"   ⚠️  {msg_key}: auch nach Testnachricht nicht gefunden")
-                        else:
-                            print(f"   ⚠️  {msg_key}: auch nach Testnachricht nicht gefunden")
-            except Exception as e:
-                print(f"   ⚠️  Testnachricht fehlgeschlagen: {e}")
-
-        # Screenshot für manuelle Überprüfung
-        from config.settings import SCREENSHOTS_DIR
-        SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
-        screenshot_path = str(SCREENSHOTS_DIR / "discovery.png")
-        page.screenshot(path=screenshot_path, full_page=True)
-        print(f"   📸 Screenshot gespeichert: {screenshot_path}")
+        _run_initial_pattern_search(page, results, discovered_selectors)
+        _try_resolve_messages_via_test(page, results, discovered_selectors)
+        _save_discovery_screenshot(page)
 
         browser.close()
 
