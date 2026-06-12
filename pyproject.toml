@@ -18,6 +18,13 @@ dependencies = [
 [project.scripts]
 uiux-test = "run:main"
 
+[tool.setuptools]
+py-modules = ["app", "run", "conftest"]
+
+[tool.setuptools.packages.find]
+include = ["utils*"]
+namespaces = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
