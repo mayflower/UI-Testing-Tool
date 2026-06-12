@@ -9,3 +9,6 @@ app:
 
 config:
   FLASK_ENV: "production"
+
+# secrets: wird aus values.sops.yaml befuellt (FLASK_SECRET_KEY)
+secrets: {}

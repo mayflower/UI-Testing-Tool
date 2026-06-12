@@ -1,0 +1,22 @@
+keys:
+  - &argocd C8BAF137BBAEB4F6CC0192DEC3D68F0DB37D7F66
+  - &finn-melzer 2A11039577F094006D59866E93258D71AA1811A4
+  - &tom-sanftenberg B3EF469AE574041EB0ECC1965392D25EE98E8718
+  - &robin-korn 5E7339741DF1ACA1FF0BB7B5149B2FAFF9BAB579
+  - &jo-brunner 31DE531DCEC11401C81D6428AFB31FD48EFEAF27
+  - &bjoern-schotte 1142F46118719B8E39C5CCF3259D9F60C231F3BD
+  - &mario-gregor 91E6D4E83C364F9AC2A8C5F8E3AFB1814E06FD89
+key_groups:
+  - &main
+    pgp:
+      - *argocd
+      - *finn-melzer
+      - *tom-sanftenberg
+      - *robin-korn
+      - *jo-brunner
+      - *bjoern-schotte
+      - *mario-gregor
+creation_rules:
+  - path_regex: ^*.$
+    key_groups:
+      - *main

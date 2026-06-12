@@ -20,6 +20,10 @@ spec:
         app.kubernetes.io/name: ui-testing-tool
         app.kubernetes.io/component: app
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
       containers:
         - name: ui-testing-tool
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
