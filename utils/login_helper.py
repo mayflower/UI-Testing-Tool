@@ -243,22 +243,22 @@ def _handle_entra_mfa(page: Page, mfa_timeout: int = 120000) -> None:
     if number_el and number_el.is_visible():
         number = number_el.inner_text().strip()
         print(f"\n{'='*50}")
-        print(f"  MFA ERFORDERLICH - Number Matching")
+        print("  MFA ERFORDERLICH - Number Matching")
         print(f"  Bitte die Zahl  >>{number}<<  in der")
-        print(f"  Microsoft Authenticator App bestaetigen.")
-        print(f"  (Live-Ansicht im Browser verfuegbar)")
+        print("  Microsoft Authenticator App bestaetigen.")
+        print("  (Live-Ansicht im Browser verfuegbar)")
         print(f"{'='*50}\n")
     elif page.query_selector("input[name='otc']"):
         print(f"\n{'='*50}")
-        print(f"  MFA ERFORDERLICH - Einmal-Code")
-        print(f"  Bitte den Code im Browser eingeben.")
-        print(f"  (Live-Ansicht im Browser verfuegbar)")
+        print("  MFA ERFORDERLICH - Einmal-Code")
+        print("  Bitte den Code im Browser eingeben.")
+        print("  (Live-Ansicht im Browser verfuegbar)")
         print(f"{'='*50}\n")
     else:
         print(f"\n{'='*50}")
-        print(f"  MFA ERFORDERLICH")
-        print(f"  Bitte Anforderung in der Authenticator App bestaetigen.")
-        print(f"  (Live-Ansicht im Browser verfuegbar)")
+        print("  MFA ERFORDERLICH")
+        print("  Bitte Anforderung in der Authenticator App bestaetigen.")
+        print("  (Live-Ansicht im Browser verfuegbar)")
         print(f"{'='*50}\n")
 
     # Polling-Loop: Screenshot alle 500ms + MFA-Abschluss pruefen

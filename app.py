@@ -41,19 +41,19 @@ test_runs: dict[str, dict] = {}
 _TESTRUN_NOT_FOUND = "Testlauf nicht gefunden"
 
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
     """Dashboard-Startseite."""
     return render_template("index.html")
 
 
-@app.route("/api/status")
+@app.route("/api/status", methods=["GET"])
 def api_status():
     """Health-Check-Endpoint fuer Kubernetes Probes."""
     return jsonify({"status": "ok"})
 
 
-@app.route("/api/environments")
+@app.route("/api/environments", methods=["GET"])
 def api_environments():
     """Alle konfigurierten Umgebungen."""
     envs = get_environments()
@@ -85,7 +85,7 @@ def api_remove_environment(name):
     return jsonify({"status": "ok"})
 
 
-@app.route("/api/selectors")
+@app.route("/api/selectors", methods=["GET"])
 def api_selectors():
     """Aktuelle CSS-Selektoren."""
     sels = get_selectors()
@@ -105,7 +105,7 @@ def api_save_selectors():
     return jsonify({"status": "ok"})
 
 
-@app.route("/api/brand")
+@app.route("/api/brand", methods=["GET"])
 def api_brand():
     """Branding-Konfiguration."""
     return jsonify(get_brand())
@@ -122,7 +122,7 @@ def _classify_report(name: str) -> str:
     return "unknown"
 
 
-@app.route("/api/reports")
+@app.route("/api/reports", methods=["GET"])
 def api_reports():
     """Liste aller generierten Reports, neueste zuerst."""
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -143,7 +143,7 @@ def api_reports():
     return jsonify(reports)
 
 
-@app.route("/api/reports/<name>")
+@app.route("/api/reports/<name>", methods=["GET"])
 def api_report_content(name):
     """Inhalt eines Reports."""
     path = REPORTS_DIR / name
@@ -152,7 +152,7 @@ def api_report_content(name):
     return jsonify({"content": path.read_text(encoding="utf-8")})
 
 
-@app.route("/api/screenshots")
+@app.route("/api/screenshots", methods=["GET"])
 def api_screenshots():
     """Liste aller Screenshots."""
     SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -166,14 +166,14 @@ def api_screenshots():
     return jsonify(shots)
 
 
-@app.route("/static_screenshots/<name>")
+@app.route("/static_screenshots/<name>", methods=["GET"])
 def serve_screenshot(name):
     """Screenshot-Dateien ausliefern."""
     from flask import send_from_directory
     return send_from_directory(str(SCREENSHOTS_DIR), name)
 
 
-@app.route("/static_screenshots/website_scan/<name>")
+@app.route("/static_screenshots/website_scan/<name>", methods=["GET"])
 def serve_website_scan_screenshot(name):
     """Website-Scan Screenshots ausliefern."""
     from flask import send_from_directory
@@ -181,7 +181,7 @@ def serve_website_scan_screenshot(name):
     return send_from_directory(str(scan_dir), name)
 
 
-@app.route("/live-browser")
+@app.route("/live-browser", methods=["GET"])
 def live_browser():
     """Aktueller Live-Screenshot des Playwright-Browsers (fuer MFA-Anzeige)."""
     from flask import send_file
@@ -507,7 +507,7 @@ def api_run_tests():
     return jsonify({"run_id": run_id})
 
 
-@app.route("/api/tests/status/<run_id>")
+@app.route("/api/tests/status/<run_id>", methods=["GET"])
 def api_test_status(run_id):
     """Status eines Testlaufs abfragen."""
     run = test_runs.get(run_id)
@@ -560,7 +560,7 @@ def api_cancel_tests(run_id):
     return jsonify({"status": "ok", "message": "Abbruch angefordert"})
 
 
-@app.route("/api/tests/stream/<run_id>")
+@app.route("/api/tests/stream/<run_id>", methods=["GET"])
 def api_test_stream(run_id):
     """Server-Sent Events Stream für Live-Updates."""
     def generate():
@@ -659,14 +659,14 @@ def api_jira_config_save():
     return jsonify({"ok": True})
 
 
-@app.route("/api/jira/test-connection")
+@app.route("/api/jira/test-connection", methods=["GET"])
 def api_jira_test_connection():
     """Testet ob Jira erreichbar und Zugangsdaten korrekt sind."""
     from utils.jira_helper import test_connection
     return jsonify(test_connection())
 
 
-@app.route("/api/jira/projects")
+@app.route("/api/jira/projects", methods=["GET"])
 def api_jira_projects():
     """Gibt alle zugaenglichen Jira-Projekte zurueck."""
     from utils.jira_helper import get_projects
@@ -823,7 +823,7 @@ def _website_scan_done_payload(run: dict) -> str:
     })
 
 
-@app.route("/api/website-scan/stream/<run_id>")
+@app.route("/api/website-scan/stream/<run_id>", methods=["GET"])
 def api_website_scan_stream(run_id):
     """SSE-Stream für Website-Scan Live-Updates."""
     def generate():

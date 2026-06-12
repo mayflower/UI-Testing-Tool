@@ -113,7 +113,7 @@ def run_tests(env_name: str | None, suite: str | None) -> list[dict]:
     args.append("--override-ini=addopts=")
 
     # pytest ausführen
-    exit_code = pytest.main(args, plugins=[collector])
+    pytest.main(args, plugins=[collector])
 
     return collector.results
 

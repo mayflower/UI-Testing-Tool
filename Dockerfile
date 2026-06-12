@@ -30,11 +30,9 @@ COPY tests/ ./tests/
 COPY templates/ ./templates/
 COPY static/ ./static/
 
-# Verzeichnisse fuer Reports und Screenshots (werden zur Laufzeit gefuellt)
-RUN mkdir -p reports screenshots
-
-# Playwright Chromium installieren
-RUN playwright install chromium
+# Verzeichnisse anlegen + Playwright-Browser installieren
+RUN mkdir -p reports screenshots \
+    && playwright install chromium
 
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1

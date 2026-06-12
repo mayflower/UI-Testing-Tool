@@ -10,7 +10,7 @@
         (function() {
             try {
                 var saved = localStorage.getItem("ep_theme");
-                var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var prefersDark = globalThis.matchMedia && globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
                 var theme = saved || (prefersDark ? "dark" : "light");
                 document.documentElement.dataset.theme = theme;
             } catch (e) {}
@@ -42,7 +42,7 @@
 
     <main>
         <!-- Mode-Switcher -->
-        <nav class="mode-switcher">
+        <nav class="mode-switcher" aria-label="Modus-Auswahl">
             <button class="mode-btn active" data-mode="chatbot" onclick="switchMode('chatbot')">Chatbot-Test</button>
             <button class="mode-btn" data-mode="website" onclick="switchMode('website')">Website-Test</button>
             <button class="mode-btn" data-mode="hilfe" onclick="switchMode('hilfe')">Hilfe</button>
@@ -559,7 +559,7 @@
                 <h1 class="help-title">Anleitung</h1>
                 <p class="help-intro">Dieses Tool prüft Webseiten und Chatbots automatisch auf Fehler, Barrierefreiheit und Benutzerfreundlichkeit. Hier wird Schritt für Schritt erklärt, wie es funktioniert.</p>
 
-                <nav class="help-nav">
+                <nav class="help-nav" aria-label="Hilfe-Navigation">
                     <a href="#help-chatbot" class="help-nav-btn" onclick="scrollToHelp('help-chatbot')">Chatbot-Test</a>
                     <a href="#help-website" class="help-nav-btn" onclick="scrollToHelp('help-website')">Website-Test</a>
                     <a href="#help-reports" class="help-nav-btn" onclick="scrollToHelp('help-reports')">Berichte</a>
