@@ -26,6 +26,31 @@ function escapeAttr(str) {
     return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
+// ========== CSRF ==========
+
+function getCSRFToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute("content") : "";
+}
+
+// Globaler fetch-Wrapper: ergaenzt X-CSRFToken bei unsafen HTTP-Methoden.
+// Same-origin only — externe URLs werden nicht angefasst.
+(function patchFetchForCSRF() {
+    const UNSAFE = new Set(["POST", "PUT", "DELETE", "PATCH"]);
+    const originalFetch = globalThis.fetch.bind(globalThis);
+    globalThis.fetch = function(input, init = {}) {
+        const method = (init.method || (typeof input === "object" && input.method) || "GET").toUpperCase();
+        if (UNSAFE.has(method)) {
+            const url = typeof input === "string" ? input : (input && input.url) || "";
+            const isSameOrigin = !url.startsWith("http") || url.startsWith(globalThis.location.origin);
+            if (isSameOrigin) {
+                init = { ...init, headers: { ...(init.headers || {}), "X-CSRFToken": getCSRFToken() } };
+            }
+        }
+        return originalFetch(input, init);
+    };
+})();
+
 // ========== API-Aufrufe ==========
 
 async function api(url, options = {}) {

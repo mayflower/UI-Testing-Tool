@@ -13,6 +13,7 @@ import time
 import uuid
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, Response
+from flask_wtf.csrf import CSRFProtect
 
 from config.settings import (
     get_environments,
@@ -34,6 +35,11 @@ app = Flask(
     template_folder="templates/web",
     static_folder="static",
 )
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex()
+app.config["SESSION_COOKIE_SAMESITE"] = "Strict"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
+
+csrf = CSRFProtect(app)
 
 # Aktive Testläufe speichern
 test_runs: dict[str, dict] = {}
