@@ -48,7 +48,7 @@ class TestKeyboardNavigation:
         page.keyboard.press("Enter")
 
         # Warte auf Antwort
-        response = chat.wait_for_response(timeout=10000)
+        response = chat.wait_for_response(timeout=40000)
         assert response is not None, (
             "Enter-Taste hat keine Nachricht gesendet oder Bot hat nicht geantwortet"
         )

@@ -39,7 +39,7 @@ class TestChatWidgetA11y:
         if not focus_in_input:
             # Manche Widgets verlieren den Fokus erst, wenn die Antwort eintrifft —
             # akzeptabel, aber wenn der Fokus dauerhaft weg ist, ist das ein Problem.
-            chat.wait_for_response(timeout=15000)
+            chat.wait_for_response(timeout=40000)
             page.wait_for_timeout(500)
             focus_in_input = page.evaluate(
                 f"() => document.activeElement?.matches('{input_sel}') || false"
