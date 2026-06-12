@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from config.settings import TEMPLATES_DIR, REPORTS_DIR, TESTER_NAME
 
@@ -291,9 +291,15 @@ TEST_DESCRIPTIONS = {
 
 
 def _get_jinja_env() -> Environment:
-    """Erstelle Jinja2-Umgebung mit Templates-Verzeichnis."""
+    """Erstelle Jinja2-Umgebung mit Templates-Verzeichnis.
+
+    Auto-Escape nur fuer HTML/XML-Templates aktiv; Markdown-Templates
+    bleiben unbescaped, damit `<`, `>`, `&` etc. wie geschrieben im
+    Report landen.
+    """
     return Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
+        autoescape=select_autoescape(("html", "htm", "xml")),
         keep_trailing_newline=True,
         trim_blocks=True,
         lstrip_blocks=True,
