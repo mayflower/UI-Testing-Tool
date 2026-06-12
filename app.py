@@ -30,12 +30,21 @@ from config.settings import (
     ROOT_DIR,
 )
 
+def _load_app_secret() -> str:
+    """Lese den Flask-Session-Secret-Key aus der Umgebung. Fallback auf
+    Zufallswert, wenn FLASK_SECRET_KEY nicht gesetzt ist (lokale Dev).
+    Production muss FLASK_SECRET_KEY explizit setzen, sonst werden alle
+    Sessions beim Restart ungueltig.
+    """
+    return os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex()
+
+
 app = Flask(
     __name__,
     template_folder="templates/web",
     static_folder="static",
 )
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex()
+app.secret_key = _load_app_secret()
 app.config["SESSION_COOKIE_SAMESITE"] = "Strict"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
 
