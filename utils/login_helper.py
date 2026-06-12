@@ -16,12 +16,17 @@ _LIVE_VIEW_HINT = "  (Live-Ansicht im Browser verfuegbar)"
 
 def _save_live_screenshot(page: Page) -> None:
     """Schreibe Live-Screenshot atomar (tmp + os.replace), damit das Frontend
-    nie eine halbfertig geschriebene Datei lesen kann."""
+    nie eine halbfertig geschriebene Datei lesen kann.
+
+    Best-effort: Page kann waehrend des Screenshots geschlossen werden oder
+    der Replace kann durch parallele Reader scheitern. Beides nicht kritisch.
+    """
     try:
         page.screenshot(path=_LIVE_SCREENSHOT_TMP)
         os.replace(_LIVE_SCREENSHOT_TMP, _LIVE_SCREENSHOT_PATH)
-    except Exception:
-        pass
+    except Exception as e:
+        if os.getenv("EP_DEBUG"):
+            print(f"[debug] Live-Screenshot fehlgeschlagen: {e}")
 
 
 # Generische Login-Formular-Selektoren
