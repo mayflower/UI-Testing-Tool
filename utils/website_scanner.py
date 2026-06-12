@@ -98,8 +98,9 @@ class WebsiteScanner:
             self._add("screenshots", name, "info", "info", label,
                        screenshot=f"/static_screenshots/website_scan/{filename}",
                        viewport=label)
-        except Exception:
-            pass
+        except Exception as e:
+            self._add("screenshots", name, "warning", "minor",
+                       f"Screenshot fehlgeschlagen: {e}")
 
     def _execute_pre_actions(self, page):
         """Führe Vor-Aktionen aus (fill, click, wait).
@@ -216,6 +217,8 @@ class WebsiteScanner:
             try:
                 page.wait_for_load_state("networkidle", timeout=10000)
             except Exception:
+                # Seiten mit Websockets/Polling werden nie "idle" - SPA-Hydration
+                # ist der eigentliche Indikator, dass die Seite nutzbar ist.
                 pass
             self._wait_for_spa_hydration(page)
             self._take_screenshot(page, "nach_aktionen", "Nach Vor-Aktionen")

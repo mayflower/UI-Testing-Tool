@@ -287,8 +287,9 @@ def _detect_entra_error(page: Page) -> str | None:
         el = page.query_selector(_ENTRA_ERROR)
         if el and el.is_visible():
             return el.inner_text().strip() or None
-    except Exception:
-        pass
+    except Exception as e:
+        if os.getenv("EP_DEBUG"):
+            print(f"[debug] Entra-Error-Detection fehlgeschlagen: {e}")
     return None
 
 

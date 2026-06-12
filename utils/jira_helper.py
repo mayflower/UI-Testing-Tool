@@ -84,6 +84,7 @@ def _detect_api_version(config: dict) -> int:
                 _api_version_cache[base] = 2
                 return 2
     except (requests.RequestException, ValueError):
+        # Server-Endpoint nicht erreichbar oder kein JSON -> Cloud annehmen.
         pass
 
     _api_version_cache[base] = 3

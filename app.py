@@ -755,8 +755,8 @@ def _run_website_scan_worker(
                     checks=checks,
                 )
                 run["report"] = report_path.name
-            except Exception:
-                pass
+            except Exception as e:
+                run["report_error"] = str(e)
     except Exception as e:
         run["status"] = "error"
         run["error"] = str(e)
