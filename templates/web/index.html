@@ -9,14 +9,16 @@
     <script>
         // Theme früh setzen, um Flash of Unstyled Content zu vermeiden
         (function() {
+            var theme = "light";
             try {
                 var saved = localStorage.getItem("ep_theme");
                 var prefersDark = globalThis.matchMedia && globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
-                var theme = saved || (prefersDark ? "dark" : "light");
-                document.documentElement.dataset.theme = theme;
+                theme = saved || (prefersDark ? "dark" : "light");
             } catch (e) {
-                // localStorage/matchMedia nicht verfuegbar (Private-Mode, alte Browser) – Default-Theme greift via CSS
+                // localStorage/matchMedia nicht verfuegbar (Private-Mode, alte Browser) – explizit auf Light zurueckfallen
+                theme = "light";
             }
+            document.documentElement.dataset.theme = theme;
         })();
     </script>
 </head>
