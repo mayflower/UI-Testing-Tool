@@ -321,7 +321,7 @@ def _run_tests_worker(
 
 
 _TEST_LINE_RE = re.compile(
-    r"^(tests/.+?::.+?)\s+(PASSED|FAILED|SKIPPED|ERROR)"
+    r"^(tests/\S+::\S+)\s+(PASSED|FAILED|SKIPPED|ERROR)"
 )
 
 
