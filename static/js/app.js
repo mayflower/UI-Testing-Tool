@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function persistLocal(key, value) {
     try {
         localStorage.setItem(key, value);
-    } catch (e) {
+    } catch {
         // localStorage nicht verfuegbar (Private-Mode, Quota) - Praeferenz wird nicht persistiert
     }
 }
