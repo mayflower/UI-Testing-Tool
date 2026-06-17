@@ -99,39 +99,38 @@ Ziel des Dokuments: für die aktuell **abnahmebereiten** Tickets beschreiben, **
 
 **Ziel laut Ticket:** Ecki bezieht bei der Suche auch den Inhalt von **Confluence-Dateianhängen** (PDF, Office, Bilder, Plaintext) ein — nicht nur den Text auf der Confluence-Seite selbst.
 
-> ⚠️ **Scope-Hinweis (wichtig fürs Testen):** Pascal Weller hat am 2026-06-09 im Ticket nachgefragt, ob nur **PDFs** umgesetzt sind oder auch weitere Prio-Dateitypen. **Bens Antwort steht noch aus.** Test-Schritte zu DOCX/XLSX/PPTX (Prio 1), PNG/JPG/SVG (Prio 2) und CSV/MD/TXT (Prio 3) erst durchführen, wenn der umgesetzte Scope bestätigt ist — sonst werden Cases gegen einen nie angefassten Scope getestet.
-> **AC 4 (ACL/Permissions)** ist im Ticket explizit als „nächste Schritte JUNI" markiert → vermutlich **nicht** in PR #41 enthalten; Abnahme nicht darauf blocken (separat aufsetzen).
+> ✅ **Scope bestätigt (2026-06-17):** In PR #41 sind **nur PDF und DOCX** umgesetzt. Die übrigen Prio-1-Typen (XLSX, PPTX) sowie alle Prio-2- (PNG/JPG/SVG) und Prio-3-Typen (CSV/MD/TXT) sind **noch nicht** umgesetzt → für diese Story nur PDF + DOCX testen, der Rest folgt in Anschluss-Tickets.
+> **AC 4 (ACL/Permissions)** ist im Ticket explizit als „nächste Schritte JUNI" markiert → **nicht** in PR #41 enthalten; Abnahme nicht darauf blocken (separat aufsetzen).
 
-**Dateityp-Priorisierung laut Ticket:**
-- Prio 1: PDF, DOCX, XLSX, PPTX
-- Prio 2: PNG, JPG, SVG
-- Prio 3: CSV, MD, TXT
+**Dateityp-Priorisierung laut Ticket (✅ = in PR #41 umgesetzt):**
+- Prio 1: **PDF ✅**, **DOCX ✅**, XLSX ⬜, PPTX ⬜
+- Prio 2: PNG ⬜, JPG ⬜, SVG ⬜
+- Prio 3: CSV ⬜, MD ⬜, TXT ⬜
 - Bewusst ignoriert: MP4, MP3, ZIP, RAR, 7Z, DOC, XLS, PPT
 
 **Voraussetzungen:**
-- Umgesetzter Scope mit Ben bestätigt (s. Scope-Hinweis).
 - Dagster-Sync-Status für Confluence-Attachments auf Dev/Stage geklärt; idealerweise manueller Trigger verfügbar (sonst über Nacht testen).
-- Test-Confluence-Seite mit Anhängen, je mit **eindeutigem Codewort** (z. B. „ZIRKUS-2026-XYZ"): PDF, DOCX, XLSX (Tabelle: Attraktion/Höhenrestriktion/Wartezeit), PPTX, PNG mit lesbarem Text, SVG, CSV, MD, TXT; zusätzlich 1× bewusst ignorierter Typ (DOC/MP3); 1× Datei in restricted Space.
-- Zwei Test-User: einer mit voller Leseberechtigung, einer ohne Zugriff auf den restricted Space.
+- Test-Confluence-Seite mit Anhängen, je mit **eindeutigem Codewort** (z. B. „ZIRKUS-2026-XYZ"): **1× PDF** (idealerweise mit Tabelle + zweispaltigem Layout) und **1× DOCX** (mit Tabelle im Fließtext). Optional zur Negativ-Absicherung 1× nicht umgesetzter Typ (z. B. XLSX/PNG) und 1× bewusst ignorierter Typ (DOC/MP3).
 - Langfuse-Trace-View offen.
 
 **Schritte:**
-1. Pro umgesetztem Dateityp eine Frage stellen, deren Antwort nur im jeweiligen Anhang steht (Codewort abfragen).
+1. Je eine Frage zu PDF und zu DOCX stellen, deren Antwort nur im jeweiligen Anhang steht (Codewort abfragen).
 2. Bei einer Antwort auf die angegebene Quelle klicken (Link-Test).
-3. XLSX/DOCX mit Tabellen gezielt zu einzelnen Zellen/Spalten befragen.
+3. PDF- und DOCX-Tabellen / mehrspaltiges Layout gezielt befragen.
 4. Frage stellen, deren Antwort nirgends steht (Negativ-Test).
-5. Falls Sync triggerbar: Datei neu ablegen / löschen / ersetzen und nach Sync erneut fragen.
+5. Optional: Frage zu einem nicht umgesetzten Typ (XLSX/PNG) → darf nicht aus dem Anhang beantwortet werden.
 
 **Testkriterien:**
-- [ ] **Multiformat-Coverage (AC 1):** Inhalt der umgesetzten Dateitypen wird gefunden und korrekt wiedergegeben; Codewort erscheint in der Antwort.
-- [ ] **Ignorierte Typen:** DOC/MP3 o. Ä. erscheinen **nicht** als Quelle.
+- [ ] **PDF-Coverage (AC 1):** Inhalt aus PDF-Anhang wird gefunden und korrekt wiedergegeben; Codewort erscheint in der Antwort.
+- [ ] **DOCX-Coverage (AC 1):** Inhalt aus DOCX-Anhang wird gefunden und korrekt wiedergegeben; Codewort erscheint in der Antwort.
+- [ ] **Nicht umgesetzte Typen:** Inhalt aus XLSX/PPTX/PNG/SVG/CSV/MD/TXT wird (noch) **nicht** als Anhangs-Quelle geliefert — erwartetes Verhalten in dieser Story; ebenso DOC/MP3 (bewusst ignoriert).
 - [ ] **Quellenangabe (AC 2):** Jede aus einem Dokument stammende Information ist als Quelle deklariert; Quelle als **funktionierender Hyperlink** auf Original-Datei bzw. Parent-Seite (kein 404).
 - [ ] **Sprechende Quelle:** Dateiname/Titel klar erkennbar (nicht nur Hash/ID).
-- [ ] **Mehrere Quellen:** Antwort aus zwei Anhängen → beide separat gelistet, beide Links funktional; Mix Seite + Anhang korrekt deklariert.
-- [ ] **Multimodales Verständnis (AC 3):** Tabellen (XLSX/DOCX) und mehrspaltige Layouts (PDF-Flyer) logisch korrekt interpretiert — keine vertauschten Zellen, kein „Wortsalat", korrekte Reading-Order.
+- [ ] **Mehrere Quellen:** Antwort aus PDF + DOCX → beide separat gelistet, beide Links funktional; Mix Seite + Anhang korrekt deklariert.
+- [ ] **Multimodales Verständnis (AC 3):** Tabellen (DOCX/PDF) und mehrspaltige PDF-Layouts logisch korrekt interpretiert — keine vertauschten Zellen, kein „Wortsalat", korrekte Reading-Order.
 - [ ] **Negativ-Acceptance:** Frage ohne Quelle → kontrollierte „nicht gefunden"-Antwort, **keine halluzinierte Quelle**.
-- [ ] **Sync-Lifecycle (AC 1, falls testbar):** neues Dokument nach Sync findbar; gelöschtes nicht mehr in Antworten; ersetztes nutzt die neue Version.
-- [ ] **ACL/Permissions (AC 4 — „nächste Schritte JUNI", falls in Scope):** User mit Berechtigung bekommt Inhalt + Quelle; User ohne Berechtigung bekommt **keinen** Inhalt und **keine** Quelle (kein Leak).
+- [ ] **Sync-Lifecycle (AC 1, falls testbar):** neues PDF/DOCX nach Sync findbar; gelöschtes nicht mehr in Antworten; ersetztes nutzt die neue Version.
+- [ ] **ACL/Permissions (AC 4):** **nicht in PR #41** („nächste Schritte JUNI") → in dieser Abnahme nicht testen, separat aufsetzen.
 
 **Verifikation:** Langfuse-Trace einer Antwort mit Dokumenten-Quelle zeigt einen Retrieval-Span mit Treffer-Dokument; die in der Antwort verlinkte Quelle ist klickbar und führt auf den Original-Anhang im Confluence.
 
@@ -142,4 +141,4 @@ Ziel des Dokuments: für die aktuell **abnahmebereiten** Tickets beschreiben, **
 
 - **KI-224:** Umsetzungs-Scope mit Dev bestätigen (keine AC im Ticket) — „pro Request" vs. „periodische" Tool-Aktualisierung.
 - **KI-234:** Round-Trip-Abgrenzung zu **KI-313** klären (Erkennung hier vs. reversible Pseudonymisierung dort); aktive Presidio-Module erfragen; Stand der Evaluator-Liste im Confluence prüfen.
-- **KI-40:** Umgesetzten Dateityp-Scope mit Ben bestätigen (Pascals Frage vom 2026-06-09 offen — nur PDF oder auch Prio-1/2/3-Typen?); Dagster-Sync-Status auf Stage + manuellen Trigger klären; AC 4 (Permissions) als „nächste Schritte JUNI" voraussichtlich nicht in PR #41 → Abnahme nicht darauf blocken.
+- **KI-40:** Scope geklärt (2026-06-17) — nur **PDF + DOCX** in PR #41; übrige Dateitypen folgen separat. Offen bleibt: Dagster-Sync-Status auf Stage + manuellen Trigger klären; AC 4 (Permissions) als „nächste Schritte JUNI" nicht in PR #41 → Abnahme nicht darauf blocken.
