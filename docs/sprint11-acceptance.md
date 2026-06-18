@@ -110,15 +110,23 @@ Ziel des Dokuments: für die aktuell **abnahmebereiten** Tickets beschreiben, **
 
 **Voraussetzungen:**
 - Dagster-Sync-Status für Confluence-Attachments auf Dev/Stage geklärt; idealerweise manueller Trigger verfügbar (sonst über Nacht testen).
-- Test-Confluence-Seite mit Anhängen, je mit **eindeutigem Codewort** (z. B. „ZIRKUS-2026-XYZ"): **1× PDF** (idealerweise mit Tabelle + zweispaltigem Layout) und **1× DOCX** (mit Tabelle im Fließtext). Optional zur Negativ-Absicherung 1× nicht umgesetzter Typ (z. B. XLSX/PNG) und 1× bewusst ignorierter Typ (DOC/MP3).
+- Test-Confluence-Seite mit Anhängen, **jede Datei mit eigenem, eindeutigem Codewort** (damit die genutzte Quelle eindeutig zuordenbar ist), z. B. PDF → `ZIRKUS-PDF-2026`, DOCX → `ZIRKUS-DOCX-2026`: **1× PDF** (idealerweise mit Tabelle + zweispaltigem Layout) und **1× DOCX** (mit Tabelle im Fließtext). Optional zur Negativ-Absicherung 1× nicht umgesetzter Typ (z. B. XLSX/PNG) und 1× bewusst ignorierter Typ (DOC/MP3).
 - Langfuse-Trace-View offen.
 
 **Schritte:**
+0. **Pre-flight:** Bestätigen, dass der Dagster-Sync der Test-Anhänge abgeschlossen ist und die Dateien im Staging-Index liegen (Sync-Lauf/Asset-Status grün). Solange der Sync läuft, sind alle folgenden Tests aussagelos.
 1. Je eine Frage zu PDF und zu DOCX stellen, deren Antwort nur im jeweiligen Anhang steht (Codewort abfragen).
 2. Bei einer Antwort auf die angegebene Quelle klicken (Link-Test).
 3. PDF- und DOCX-Tabellen / mehrspaltiges Layout gezielt befragen.
 4. Frage stellen, deren Antwort nirgends steht (Negativ-Test).
 5. Optional: Frage zu einem nicht umgesetzten Typ (XLSX/PNG) → darf nicht aus dem Anhang beantwortet werden.
+
+**Beispiel-Fragen (copy-paste, `<CODEWORT>` ist als versteckter Fakt im jeweiligen Anhang hinterlegt):**
+- PDF-Coverage: „Wie lautet das im Test-PDF hinterlegte Codewort?" → erwartet: PDF-Codewort + PDF als deklarierte, klickbare Quelle.
+- DOCX-Coverage: „Wie lautet das im Test-DOCX hinterlegte Codewort?" → erwartet: DOCX-Codewort + DOCX als Quelle.
+- Mehrere Quellen: „Nenne die Codewörter aus allen hinterlegten Test-Dokumenten." → erwartet: beide Codewörter, beide Quellen separat gelistet, beide Links funktional.
+- Tabelle/Layout: Frage nach einem Wert, der nur über korrekte Zeilen-/Spaltenzuordnung beantwortbar ist (z. B. „Welcher Wert steht in der Tabelle in Zeile <X>, Spalte <Y>?").
+- Negativ: eine plausible Frage, deren Antwort in keinem Anhang steht → erwartet: kontrollierte „nicht gefunden"-Antwort, **keine** halluzinierte Quelle.
 
 **Testkriterien:**
 - [ ] **PDF-Coverage (AC 1):** Inhalt aus PDF-Anhang wird gefunden und korrekt wiedergegeben; Codewort erscheint in der Antwort.
