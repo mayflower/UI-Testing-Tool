@@ -61,13 +61,20 @@ unabhängig von Ecki kennen, sonst testen wir gegen eine Vermutung. Drei Quellen
 
 1. **Offizieller Ticketshop** (`ticketshop.europapark.de`) — Referenz für Preise/Verfügbarkeit aus
    Endkundensicht. Für jeden Testfall vorab die tatsächliche Zahl notieren (mit Zeitstempel, da live).
-2. **DS1 Product API & Mackstore API direkt** — für `extId`/`productId`, `soldout`/`canceled`-Flags,
-   Kontingente und Cent-Preise. Konkrete Endpunkte + valide `extId`-Beispiele bei **Ben/Michael**
+2. **DS1 Product API & Mackstore API direkt** — für `extId`/`productId`, `soldout`/`canceled`-Flags
+   und Preise. Konkrete Endpunkte + valide `extId`-Beispiele bei **Ben/Michael**
    erfragen (Ticket-Hinweis: reale Sonderfälle sind saisonabhängig schwer zu finden).
+   > **Beobachtung (Stage 02.07.):** `get_product_availability` liefert `min_euro_prices`/
+   > `max_euro_prices` bereits **in Euro** (z. B. `Adult: 76`); die Cent-Liste `prices` war leer
+   > (`prices: []`, `contingents: []`). Der im Ticket genannte „Cent"-Wert (7600 → 76,00 €) ist
+   > also nicht garantiert der Pfad, über den der Preis in die Antwort kommt — siehe Cent→Euro unten.
 3. **Langfuse (live)** — zum Nachweis, *wie* Ecki zur Antwort kam. Über den Langfuse-MCP den Trace
    der Testfrage öffnen und die Tool-/Skill-Spans prüfen:
    - Wurde der Mackstore-Skill überhaupt aufgerufen? (sonst hat das LLM geraten)
-   - Stimmen die Aufrufparameter: `productId == extId`, `bookingLocation=Online`?
+   - Stimmt der Aufrufparameter: `get_product_availability` nimmt **nur `ext_id`** entgegen
+     (die DS1-`extId`, die zugleich die Mackstore-`productId` ist). Ein Parameter
+     `bookingLocation` existiert im Tool-Vertrag **nicht** — hier nichts erwarten (verifiziert
+     am Stage-Trace `e074e1a0…`, 02.07.2026).
    - Kam die Antwort *nach* dem Tool-Span (Daten genutzt) oder *davor* (halluziniert)?
 
 **Datenmatrix anlegen:** Vor der Session pro Fall eine Zeile mit *erwartetem* Wert (aus Quelle 1/2)
@@ -85,11 +92,17 @@ festhalten. Ecki-Antwort daneben, Abweichung markieren. Ergebnis später als
   Preis + „verfügbar" vorab aus Ticketshop/Mackstore notieren.
 - **Schritte:** Frage stellen („Was kostet ein Tagesticket für Erwachsene am 15.7., ist es verfügbar?").
 - **So am besten prüfen:** Ecki-Preis 1:1 mit Ticketshop vergleichen; im Langfuse-Trace verifizieren,
-  dass der Skill mit korrektem `productId`/`bookingLocation=Online` aufgerufen wurde und der genannte
-  Preis exakt dem API-Rückgabewert (Cent/100) entspricht.
+  dass der Skill mit korrektem `ext_id` aufgerufen wurde und der genannte Preis exakt dem
+  API-Rückgabewert entspricht (i. d. R. direkt `min_euro_prices`/`max_euro_prices` in Euro; nur wenn
+  `prices` befüllt ist, greift die Cent/100-Umrechnung).
 - **Soll:** korrekter Preis in €, Aussage „verfügbar".
 - **Fallstricke:** LLM nennt einen plausiblen, aber veralteten „Erinnerungspreis" ohne Tool-Aufruf →
   nur über den Trace erkennbar, nicht an der Antwort allein.
+- **✅ Verifiziert (Stage 02.07.2026, Trace `e074e1a0…`):** Frage „Tagesticket Erwachsene 15.7.,
+  verfügbar?" → echte `search_products`- + `get_product_availability`-Calls (`ext_id "111"`),
+  `status: available`, Antwort **76,00 € Erwachsene / 65,00 € Kind/Senior**, „✅ Verfügbar", keine
+  Halluzination, kein ERROR. Ground-Truth Mack-Ticketshop (flexibles/Gutschein-Tagesticket):
+  Erwachsene 76,00 €, Kind 65,00 €, Senior 65,00 € — **exakte Übereinstimmung → PASS**.
 
 ### Testfall 2 — Ausverkauft
 - **Ziel:** Bei `soldout` sagt Ecki ehrlich „ausverkauft" statt einen Preis zu erfinden.
@@ -163,7 +176,11 @@ festhalten. Ecki-Antwort daneben, Abweichung markieren. Ergebnis später als
 
 ### Querschnitt — in jedem Fall mitprüfen
 1. **Aktualität** — Preis exakt gegen den *jetzigen* Ticketshop-Wert, keine veralteten Werte.
-2. **Cent→Euro** — exakte Umrechnung (7600 → 76,00 €), keine krummen Rundungen/Formatfehler.
+2. **Cent→Euro** — nur relevant, wenn die API tatsächlich Cent liefert. Auf Stage kam der Preis über
+   `min_euro_prices`/`max_euro_prices` bereits **in Euro** (keine Umrechnung nötig). Die Cent-Liste
+   `prices` war leer. Für einen echten Cent/100-Test daher gezielt ein Produkt suchen, das `prices`
+   in Cent befüllt — sonst prüft man einen Pfad, der gar nicht ausgeübt wird. Format immer sauber
+   (z. B. 76,00 €), keine krummen Rundungen.
 3. **Keine erfundenen Preise/Summen** — v. a. Fall 6; Trace-basiert belegen.
 4. **Fehlerfall ehrlich** — Fall 5; bei Ausfall kein halluzinierter Preis, Verweis auf Ticketshop.
 5. **Sprache** — jeden relevanten Fall zusätzlich auf **Englisch** stellen (Beispiel-Frage von Ben),
