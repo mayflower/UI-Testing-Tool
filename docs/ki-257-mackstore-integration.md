@@ -128,7 +128,7 @@ festhalten. Ecki-Antwort daneben, Abweichung markieren. Ergebnis später als
     Verfügbarkeitsquelle genutzt werden. (An Team spiegeln.)
   - ⚠️ **PO-Frage:** Ecki zeigt bei „ausverkauft" zusätzlich den (echten) Preis 99,00 €. Kein
     Preis-Fake, aber ob bei ausverkauften Events überhaupt ein Preis genannt werden soll, ist
-    fachlich mit Michael/Ben zu klären.
+    fachlich mit Michael/Pascal zu klären.
 
 ### Testfall 3 — Storniert / abgesagt
 - **Ziel:** Bei `canceled` keine Verfügbarkeits-/Preisabfrage, sondern „abgesagt".
