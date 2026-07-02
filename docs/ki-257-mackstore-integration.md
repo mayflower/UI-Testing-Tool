@@ -42,7 +42,7 @@ Kein Kauf/Warenkorb/Checkout, keine Buchung/Reservierung, keine Schreiboperation
 - „Was kostet ein Mondflug-Ticket?"
 - „How much is a Europa-Park day ticket?" (Englisch → Mehrsprachigkeit)
 
-### Testfälle aus dem Ticket
+### Überblick Testfälle
 
 | # | Szenario | Beispiel-Frage | Soll-Verhalten |
 |---|---|---|---|
@@ -54,16 +54,125 @@ Kein Kauf/Warenkorb/Checkout, keine Buchung/Reservierung, keine Schreiboperation
 | 6 | Mehrere Tarife | „Was kostet ein Ticket für 2 Erwachsene + 2 Kinder?" | Einzelpreise pro Kategorie, **keine** eigenmächtige Summe |
 | 7 | Produkt nicht gefunden (404) | „Gibt es noch das Sonderticket XYZ?" | „nicht gefunden", verständlich |
 
-### Besonders prüfen
-1. **Aktualität** — mit echtem Ticketshop-Preis abgleichen (keine veralteten Werte).
-2. **Cent→Euro** — Preise exakt (7600 → 76,00 €), keine krummen Rundungen.
-3. **Keine erfundenen Preise/Summen** — Testfall 6: Ecki darf nicht selbst addieren.
-4. **Fehlerfall ehrlich** — bei API-Ausfall keine halluzinierten Preise, Verweis auf Ticketshop.
-5. **Sprache** — deutsche und englische Anfragen.
+## Testvorbereitung (einmalig, vor allen Fällen)
+
+Der Kern jeder Prüfung ist ein **Ground-Truth-Abgleich**: Wir müssen die *korrekte* Antwort
+unabhängig von Ecki kennen, sonst testen wir gegen eine Vermutung. Drei Quellen:
+
+1. **Offizieller Ticketshop** (`ticketshop.europapark.de`) — Referenz für Preise/Verfügbarkeit aus
+   Endkundensicht. Für jeden Testfall vorab die tatsächliche Zahl notieren (mit Zeitstempel, da live).
+2. **DS1 Product API & Mackstore API direkt** — für `extId`/`productId`, `soldout`/`canceled`-Flags,
+   Kontingente und Cent-Preise. Konkrete Endpunkte + valide `extId`-Beispiele bei **Ben/Michael**
+   erfragen (Ticket-Hinweis: reale Sonderfälle sind saisonabhängig schwer zu finden).
+3. **Langfuse (live)** — zum Nachweis, *wie* Ecki zur Antwort kam. Über den Langfuse-MCP den Trace
+   der Testfrage öffnen und die Tool-/Skill-Spans prüfen:
+   - Wurde der Mackstore-Skill überhaupt aufgerufen? (sonst hat das LLM geraten)
+   - Stimmen die Aufrufparameter: `productId == extId`, `bookingLocation=Online`?
+   - Kam die Antwort *nach* dem Tool-Span (Daten genutzt) oder *davor* (halluziniert)?
+
+**Datenmatrix anlegen:** Vor der Session pro Fall eine Zeile mit *erwartetem* Wert (aus Quelle 1/2)
+festhalten. Ecki-Antwort daneben, Abweichung markieren. Ergebnis später als
+`docs/sprintXX-acceptance.md` dokumentieren (analog zu bestehenden Acceptance-Files).
+
+**Reproduzierbarkeit:** Preise sind live und können sich zwischen „Soll notieren" und „Ecki fragen"
+ändern. Daher Ground-Truth **unmittelbar vor** der Ecki-Frage ziehen (Minuten, nicht Stunden).
+
+## Detaillierte Testdurchführung
+
+### Testfall 1 — Verfügbares Produkt + Preis
+- **Ziel:** Happy Path — Ecki gibt für ein buchbares Produkt korrekten Live-Preis und Verfügbarkeit.
+- **Vorbedingung:** Produkt mit `mackStoreProduct: true`, `enabled`, nicht `soldout`/`canceled`.
+  Preis + „verfügbar" vorab aus Ticketshop/Mackstore notieren.
+- **Schritte:** Frage stellen („Was kostet ein Tagesticket für Erwachsene am 15.7., ist es verfügbar?").
+- **So am besten prüfen:** Ecki-Preis 1:1 mit Ticketshop vergleichen; im Langfuse-Trace verifizieren,
+  dass der Skill mit korrektem `productId`/`bookingLocation=Online` aufgerufen wurde und der genannte
+  Preis exakt dem API-Rückgabewert (Cent/100) entspricht.
+- **Soll:** korrekter Preis in €, Aussage „verfügbar".
+- **Fallstricke:** LLM nennt einen plausiblen, aber veralteten „Erinnerungspreis" ohne Tool-Aufruf →
+  nur über den Trace erkennbar, nicht an der Antwort allein.
+
+### Testfall 2 — Ausverkauft
+- **Ziel:** Bei `soldout` sagt Ecki ehrlich „ausverkauft" statt einen Preis zu erfinden.
+- **Vorbedingung:** Ein real ausverkauftes Produkt (`soldout: true`). Ggf. echte `extId` bei
+  Ben/Michael erfragen — saisonabhängig schwer zu finden.
+- **Schritte:** „Gibt es noch Tickets für die Dinner-Show am Samstag?"
+- **So am besten prüfen:** Antwort darf **keinen** Kaufpreis als Angebot nennen; Flag `soldout` im
+  API-Rückgabewert (Quelle 2) gegen die Aussage prüfen.
+- **Soll:** klare „ausverkauft"-Aussage, kein Preis-Fake, ggf. Verweis auf Ticketshop.
+- **Fallstricke:** Ecki nennt trotzdem den (letzten bekannten) Preis „falls wieder verfügbar" — als
+  Abweichung werten und dokumentieren.
+
+### Testfall 3 — Storniert / abgesagt
+- **Ziel:** Bei `canceled` keine Verfügbarkeits-/Preisabfrage, sondern „abgesagt".
+- **Vorbedingung:** Produkt mit `canceled: true` (Beispiel bei Ben/Michael erfragen).
+- **Schritte:** „Kann ich noch Tickets für <abgesagtes Event> kaufen?"
+- **So am besten prüfen:** Im Trace prüfen, dass **keine** (oder eine als abgesagt erkannte)
+  Mackstore-Verfügbarkeitsabfrage erfolgt — die `canceled`-Info kommt bereits aus DS1.
+- **Soll:** „abgesagt", verständlich formuliert, kein Kaufangebot.
+- **Fallstricke:** Verwechslung „abgesagt" (canceled) vs. „ausverkauft" (soldout) — beide Fälle
+  bewusst getrennt testen, Wording unterscheiden.
+
+### Testfall 4 — Geringe Verfügbarkeit (<20 %)
+- **Ziel:** Bei niedrigem Restkontingent kommuniziert Ecki „nur begrenzt verfügbar".
+- **Vorbedingung:** Produkt/Datum mit Restkontingent unter der Schwelle. Schwelle (20 %?) mit Ben
+  bestätigen — *Regel im Code prüfen, nicht raten.* Kontingentwert aus Mackstore notieren.
+- **Schritte:** „Sind für Rulantica am 10.9. noch Karten frei?"
+- **So am besten prüfen:** Aus dem Mackstore-Kontingent selbst den Prozentsatz berechnen und gegen die
+  Schwelle halten; prüfen, ob die Formulierung ober-/unterhalb der Grenze umschlägt (Randwert-Test:
+  knapp über und knapp unter 20 %, falls Datenlage es erlaubt).
+- **Soll:** Hinweis „nur begrenzt verfügbar" unterhalb der Schwelle, normale Aussage darüber.
+- **Fallstricke:** Schwellenwert eventuell nicht implementiert/anders → dann als offene Frage statt
+  als Bug dokumentieren.
+
+### Testfall 5 — API-Timeout / Fehler (Graceful Degradation)
+- **Ziel:** Bei nicht erreichbarer/timeout (>5 s) Mackstore-API keine halluzinierten Preise, sondern
+  ehrlicher Hinweis; DS1-Basisdaten dürfen trotzdem gezeigt werden.
+- **Vorbedingung:** Mackstore-API muss gezielt zum Fehler gebracht werden. **DevTools-Offline ist
+  unzuverlässig** (Ecki antwortet trotzdem) — den Fehler serverseitig provozieren:
+  Backend/Ben bitten, den Mackstore-Endpunkt auf dev-1 kurzzeitig auf eine ungültige URL zu
+  zeigen / zu blocken, oder eine `productId` verwenden, die garantiert einen Fehler wirft.
+- **Schritte:** Preisfrage stellen, während Mackstore nicht erreichbar ist.
+- **So am besten prüfen:** Im Trace muss der Tool-Span einen Fehler/Timeout zeigen **und** die
+  Endantwort darf keinen Preis enthalten. Prüfen, ob DS1-Daten (Name/Beschreibung) trotzdem kommen.
+- **Soll:** „aktuell keine Auskunft möglich" + Verweis auf Ticketshop; kein erfundener Preis.
+- **Fallstricke:** Schwer reproduzierbar; Fehlerinjektion mit Backend abstimmen und den Zeitpunkt
+  exakt notieren, damit der richtige Trace gefunden wird.
+
+### Testfall 6 — Mehrere Tarife (keine eigenmächtige Summe)
+- **Ziel:** Ecki nennt Einzelpreise pro Tarifkategorie, **rechnet aber nicht selbst** die Summe
+  (außer über den dedizierten Rechen-Skill).
+- **Vorbedingung:** Produkt mit mehreren Tarifkategorien (Erwachsen/Kind/Senior).
+- **Schritte:** „Was kostet ein Ticket für 2 Erwachsene + 2 Kinder?"
+- **So am besten prüfen:** Das ist der **wichtigste Trace-Check**. Wenn Ecki eine Gesamtsumme nennt,
+  im Trace verifizieren, dass diese aus dem dedizierten Skill stammt und **nicht** vom LLM
+  „ausgerechnet" wurde (kein Additions-Token in der Generation ohne vorherigen Skill-Aufruf).
+  Einzelpreise gegen Mackstore-Kategoriepreise abgleichen.
+- **Soll:** korrekte Einzelpreise je Kategorie; Summe nur wenn über Skill belegt.
+- **Fallstricke:** Antwort *sieht* korrekt aus, Summe wurde aber vom LLM geschätzt — nur am Trace
+  erkennbar. Bewusst auch krumme Kombinationen fragen, bei denen ein LLM sich leicht verrechnet.
+
+### Testfall 7 — Produkt nicht gefunden (404)
+- **Ziel:** Bei unbekanntem Produkt verständliches „nicht gefunden" statt technischem Fehler/Halluzination.
+- **Vorbedingung:** Nach einem nicht existierenden Produkt/`extId` fragen.
+- **Schritte:** „Gibt es noch das Sonderticket XYZ?" (XYZ existiert nicht).
+- **So am besten prüfen:** Im Trace 404 vom Lookup verifizieren; Antwort darf keinen erfundenen Preis
+  und keine rohe Fehlermeldung/Stacktrace enthalten.
+- **Soll:** freundliches „nicht gefunden", ggf. Rückfrage/Alternative.
+- **Fallstricke:** Ecki „errät" ein ähnliches existierendes Produkt und beantwortet *das* — als
+  Abweichung werten (falsche Produktzuordnung).
+
+### Querschnitt — in jedem Fall mitprüfen
+1. **Aktualität** — Preis exakt gegen den *jetzigen* Ticketshop-Wert, keine veralteten Werte.
+2. **Cent→Euro** — exakte Umrechnung (7600 → 76,00 €), keine krummen Rundungen/Formatfehler.
+3. **Keine erfundenen Preise/Summen** — v. a. Fall 6; Trace-basiert belegen.
+4. **Fehlerfall ehrlich** — Fall 5; bei Ausfall kein halluzinierter Preis, Verweis auf Ticketshop.
+5. **Sprache** — jeden relevanten Fall zusätzlich auf **Englisch** stellen (Beispiel-Frage von Ben),
+   prüfen dass Zahlen/Verfügbarkeit identisch bleiben und nur die Sprache wechselt.
 
 ### Vorab klären
 - Ist **PR #45 auf dev-1 bereits deployed**? (sonst wird der alte Stand getestet)
 - Ist Lukas' **Flag/Architekturfrage** erledigt? (könnte erklären, warum „Ready for PO" evtl. noch nicht voll funktioniert)
+- **Schwellenwert Testfall 4** (geringe Verfügbarkeit) und **Timeout-Grenze Testfall 5** (>5 s) im Code/mit Ben bestätigen.
 
 > Hinweis aus dem Ticket: Reale Beispiele (z. B. tatsächlich ausverkaufte Events) sind je nach
 > Saison schwer zu finden — im Zweifel echte `extId`-Beispiele bei Ben/Michael erfragen.
