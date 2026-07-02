@@ -109,11 +109,26 @@ festhalten. Ecki-Antwort daneben, Abweichung markieren. Ergebnis später als
 - **Vorbedingung:** Ein real ausverkauftes Produkt (`soldout: true`). Ggf. echte `extId` bei
   Ben/Michael erfragen — saisonabhängig schwer zu finden.
 - **Schritte:** „Gibt es noch Tickets für die Dinner-Show am Samstag?"
-- **So am besten prüfen:** Antwort darf **keinen** Kaufpreis als Angebot nennen; Flag `soldout` im
-  API-Rückgabewert (Quelle 2) gegen die Aussage prüfen.
-- **Soll:** klare „ausverkauft"-Aussage, kein Preis-Fake, ggf. Verweis auf Ticketshop.
+- **So am besten prüfen:** Ausverkauft-Status kommt aus `get_product_availability` als
+  `status: "sold_out"` (**nicht** aus dem `soldout`-Flag von `search_products` — das kann abweichen,
+  siehe unten). Aussage gegen den `status` der Availability-Antwort prüfen.
+- **Soll:** klare „ausverkauft"-Aussage, kein erfundener Preis, ggf. Verweis auf Ticketshop.
 - **Fallstricke:** Ecki nennt trotzdem den (letzten bekannten) Preis „falls wieder verfügbar" — als
   Abweichung werten und dokumentieren.
+- **✅ Verifiziert (Stage 02.07.2026, Trace `9b3bac87…`):** Frage „Was kostet ein Ticket für das
+  Sommergrillfest?" → echte `search_products`- + `get_product_availability`-Calls (`ext_id "1347"`,
+  Sommer-Grillfest Schloss Balthasar, 7./8. Aug 2026). Availability-Rückgabe:
+  `status: "sold_out"`, `min_euro_prices: {Adult: 99.0}`. Antwort: „⚠️ Das Event ist derzeit
+  **ausverkauft**!" + 99,00 € (echter Preis aus der API) + Website-Verweis. Kein ERROR,
+  keine Halluzination → **PASS**.
+  - ⚠️ **Datenquellen-Diskrepanz:** `search_products` meldete für dasselbe Produkt `soldout: false`,
+    die Live-`get_product_availability` dagegen `status: "sold_out"`. Ecki nahm korrekt die
+    Live-Availability als Wahrheit → bestätigt die Kernregel „Verfügbarkeit immer live". Der
+    `soldout`-Flag aus der Produktsuche ist **nicht verlässlich** und darf nicht als
+    Verfügbarkeitsquelle genutzt werden. (An Team spiegeln.)
+  - ⚠️ **PO-Frage:** Ecki zeigt bei „ausverkauft" zusätzlich den (echten) Preis 99,00 €. Kein
+    Preis-Fake, aber ob bei ausverkauften Events überhaupt ein Preis genannt werden soll, ist
+    fachlich mit Michael/Ben zu klären.
 
 ### Testfall 3 — Storniert / abgesagt
 - **Ziel:** Bei `canceled` keine Verfügbarkeits-/Preisabfrage, sondern „abgesagt".
