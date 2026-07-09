@@ -54,6 +54,64 @@ Kein Kauf/Warenkorb/Checkout, keine Buchung/Reservierung, keine Schreiboperation
 | 6 | Mehrere Tarife | „Was kostet ein Ticket für 2 Erwachsene + 2 Kinder?" | Einzelpreise pro Kategorie, **keine** eigenmächtige Summe |
 | 7 | Produkt nicht gefunden (404) | „Gibt es noch das Sonderticket XYZ?" | „nicht gefunden", verständlich |
 
+## Teststand (Stand 09.07.2026)
+
+Ergebnisse auf **Stage** (Langfuse-Env `default`). Codestand: PR #45 gemergt am 01.07.,
+**kein** Fix-PR danach — die offenen Punkte sind also weiterhin unadressiert.
+
+| # | Szenario | Ergebnis | Kern-Befund | Trace |
+|---|---|---|---|---|
+| 1 | Verfügbar + Preis | ✅ PASS | Live-Preis korrekt (Erw. 76 / Kind 65 €), grounded | `e074e1a0` (02.07.) · `e39ff36a` (Oktoberfest, 09.07.) |
+| 2 | Ausverkauft | ✅ PASS | `status: sold_out` aus Live-API korrekt genutzt | `9b3bac87` (02.07.) |
+| 3 | Storniert | ⛔ BLOCKIERT | keine Testdaten (`canceled: true`-Produkt), `ext_id` von Ben/Michael nötig | — |
+| 4 | Geringe Verfügbarkeit | ⛔ BLOCKIERT | siehe Detail unten — Datenlage + Quellen-Widerspruch | `3221beb1`, `a5fcaac6` (09.07.) |
+| 5 | API-Fehler / Graceful Degr. | ❌ FAIL | `get_product_availability` raist statt Status → ganzer Turn crasht | `0ede4128`, `66f127f8`, `146fdcc4` (02.07.) |
+| 6 | Mehrere Tarife | ❌ FAIL (verbessert) | Preise jetzt live+grounded, aber Ecki **rechnet weiter selbst** | `1c0579c4` (03.07.) → `85bc2bfd` (09.07.) |
+| 7 | 404 / nicht gefunden | ✅ PASS | „nicht gefunden", keine Fehlzuordnung trotz Fuzzy-Treffer | `a8628c33` (03.07.) · `3268b6c1` (09.07.) |
+
+### Was beim nächsten Test zu tun ist (offene Punkte)
+
+**TF5 (FAIL) — Backend-Fix abwarten.** Ursache: `get_product_availability` wirft bei
+„Mackstore returned no availability records" eine ungefangene `ToolException` (code Internal)
+→ ganzer Turn stirbt mit rotem Toast. Retest erst sinnvoll, **wenn ein Fix-PR gemergt ist**
+(Stand 09.07. keiner). Nachtest: Frage „Suche generell nach wenig verfügbaren Tickets" bzw.
+eine `ext_id` erzwingen, die garantiert keine Availability-Records liefert. PASS = Turn läuft
+durch + „aktuell keine Auskunft möglich" statt Crash.
+
+**TF6 (FAIL, aber verbessert) — nur noch Selbst-Rechnen offen.** Stand 09.07. (`85bc2bfd`):
+Einzelpreise kommen jetzt korrekt aus `get_product_availability` (ext_id 111: Adult 76/Child 65;
+ext_id 107: Adult 143,5/Child 119), **kein web_fetch mehr**. ABER Ecki bildet weiter selbst die
+Summe (`2 × 76 + 2 × 65 = 282 €`) ohne Rechen-Skill → verstößt gegen „keine Berechnung"-AC.
+Nachtest-Fokus beim nächsten Mal: **nur noch prüfen, ob eine Summe erscheint und ob sie aus
+`python_run`/Skill stammt** (Trace-Check auf Additions-Token ohne vorherigen Skill-Span).
+
+**TF3 (BLOCKIERT) — Testdaten beschaffen.** Braucht ein Produkt mit `canceled: true`.
+`ext_id`-Beispiel bei **Ben/Michael** erfragen, dann Frage „Kann ich noch Tickets für <Event> kaufen?".
+
+**TF4 (BLOCKIERT) — Datenlage klären + Quellen-Widerspruch.** Zwei Probleme entdeckt am 09.07.:
+- `get_product_availability(ext_id 192, 2026-09-26)` liefert `low_availability: false` **und**
+  `contingents: []` → keine Kontingent-Basis, aus der sich „<20 %" ableiten ließe. Zusätzlich
+  Preis-Halluzination (siehe unten). Trace `3221beb1`.
+- **Widerspruch zwischen zwei Tools:** `find_low_availability_products` (Zeitraum 19.09.–11.10.)
+  listet „Eatrenalin Sommelier Dinner | 26. September" **sehr wohl als low availability**, während
+  `get_product_availability` für exakt dasselbe Produkt/Datum `low_availability: false` meldet.
+  Trace `a5fcaac6`. → Vor dem TF4-Test mit Ben klären, **welche Quelle maßgeblich** ist und
+  welchen Schwellenwert (20 %?) der Code verwendet. Testdatum wählen, für das die maßgebliche
+  Quelle eindeutig „knapp"/`low_availability: true` liefert.
+
+### Neuer Befund 09.07. — Preis-Halluzination bei fehlendem Live-Preis (Kommentar 108434)
+
+Frage „Was kostet ein Ticket für das Eatrenalin Sommelier Dinner am 26.09.26" (`3221beb1`):
+`get_product_availability(ext_id 192)` liefert `min/max_euro_prices: {Independent: 0}` (kein
+verwertbarer Preis), Ecki nennt trotzdem **399,00 €** — die Zahl steht in **keinem** Tool-Output,
+ist also erfunden. Verstoß gegen „Preise immer live" + „Strictly Grounded". Soll: bei
+Preis = 0 / `prices: []` **keinen** Preis nennen, sondern „kein Live-Preis verfügbar" (analog TF5).
+Besonders tückisch, weil an der Antwort allein nicht erkennbar — nur im Trace.
+
+> **Regel fürs Testen:** Jeder Preis-/Verfügbarkeits-Befund ist **nur über den Langfuse-Trace**
+> gültig, nie über die Chat-Antwort allein. Beide 09.07.-FAILs (Preis-Halluzination, Selbst-Rechnen)
+> sahen in der Antwort plausibel/korrekt aus und waren ausschließlich am Trace erkennbar.
+
 ## Testvorbereitung (einmalig, vor allen Fällen)
 
 Der Kern jeder Prüfung ist ein **Ground-Truth-Abgleich**: Wir müssen die *korrekte* Antwort
