@@ -31,12 +31,21 @@ from config.settings import (
 )
 
 def _load_app_secret() -> str:
-    """Lese den Flask-Session-Secret-Key aus der Umgebung. Fallback auf
-    Zufallswert, wenn FLASK_SECRET_KEY nicht gesetzt ist (lokale Dev).
-    Production muss FLASK_SECRET_KEY explizit setzen, sonst werden alle
-    Sessions beim Restart ungueltig.
+    """Lese den Flask-Session-Secret-Key aus der Umgebung. In Production
+    (FLASK_ENV == "production") ist FLASK_SECRET_KEY Pflicht: fehlt der
+    Wert, bricht der Start mit RuntimeError ab (fail-closed), damit
+    Sessions nicht bei jedem Restart ungueltig werden. Nur in lokaler
+    Entwicklung wird auf einen Zufallswert zurueckgefallen.
     """
-    return os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex()
+    secret = os.environ.get("FLASK_SECRET_KEY")
+    if secret:
+        return secret
+    if os.environ.get("FLASK_ENV") == "production":
+        raise RuntimeError(
+            "FLASK_SECRET_KEY ist in Production nicht gesetzt oder leer. "
+            "Bitte das Secret ueber das Deployment bereitstellen."
+        )
+    return os.urandom(32).hex()
 
 
 app = Flask(

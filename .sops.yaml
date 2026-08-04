@@ -17,6 +17,6 @@ key_groups:
       - *bjoern-schotte
       - *mario-gregor
 creation_rules:
-  - path_regex: ^*.$
+  - path_regex: \.sops\.ya?ml$
     key_groups:
       - *main
