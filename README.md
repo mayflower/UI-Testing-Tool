@@ -22,6 +22,7 @@ playwright install chromium
 
 # Konfiguration anlegen
 cp .env.example .env
+cp config/prompts.example.yaml config/prompts.yaml
 ```
 
 ## Konfiguration
@@ -52,7 +53,7 @@ Bei Bedarf manuell anpassen.
 
 ### 3. Branding (optional, `config/brand.yaml`)
 
-Trage die Europa-Park CI-Werte ein, sobald bekannt:
+Trage die CI-Werte des getesteten Produkts ein, sobald bekannt:
 
 ```yaml
 brand:
@@ -62,6 +63,39 @@ brand:
   fonts:
     primary: "Source Sans Pro"
 ```
+
+Nicht gesetzte Werte (`null`) führen dazu, dass der jeweilige Test übersprungen
+wird — nicht dazu, dass er fehlschlägt.
+
+### 4. Fachliche Testinhalte (`config/prompts.yaml`)
+
+Welche Fragen der Chatbot beantworten soll und welche Begriffe in der Antwort
+vorkommen müssen, steht nicht im Testcode, sondern in dieser Datei. Damit läuft
+das Werkzeug gegen jeden Chatbot, ohne dass Tests angepasst werden müssen.
+
+```bash
+cp config/prompts.example.yaml config/prompts.yaml
+```
+
+Die Vorlage dokumentiert alle Felder und bringt die domänenfreien Fälle
+(Begrüßung, Sonderzeichen, HTML-Injection, Schnellfeuer) fertig vorbelegt mit.
+Einzutragen sind die fachlichen Fragen:
+
+```yaml
+prompts:
+  domain_knowledge:
+    opening_hours:
+      prompt: "Wann habt ihr geöffnet?"
+      expect_any: ["uhr", "geöffnet", "montag"]
+```
+
+Jeder Eintrag unter `domain_knowledge` und `off_topic` wird zu einem eigenen
+Testfall — beliebig viele, ohne Codeänderung. Fehlt ein Eintrag, überspringt
+sich der zugehörige Test. Ein Lauf ohne `prompts.yaml` prüft also nur die
+domänenfreien Fälle und ist trotzdem grün.
+
+`config/prompts.yaml` ist bewusst **nicht** versioniert: die Fragen beschreiben
+das getestete Produkt, nicht das Testwerkzeug.
 
 ## Nutzung
 

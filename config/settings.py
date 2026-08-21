@@ -134,6 +134,24 @@ def get_brand() -> dict:
     return data.get("brand", {})
 
 
+def get_prompts() -> dict:
+    """Lade die fachlichen Testinhalte (Fragen, erwartete Begriffe, Indikatoren).
+
+    Bevorzugt `prompts.yaml`; fehlt die Datei, wird auf die versionierte Vorlage
+    `prompts.example.yaml` zurueckgefallen. Die Vorlage enthaelt nur die
+    domaenenfreien Faelle — fachliche Tests ueberspringen sich dann selbst,
+    statt zu scheitern.
+
+    Rueckgabe: {"prompts": {...}, "indicators": {...}} — beide Schluessel sind
+    immer vorhanden, notfalls als leeres Dict.
+    """
+    data = _load_yaml("prompts.yaml") or _load_yaml("prompts.example.yaml")
+    return {
+        "prompts": data.get("prompts") or {},
+        "indicators": data.get("indicators") or {},
+    }
+
+
 def get_jira_config() -> dict:
     """Lade Jira-Konfiguration. Fallback auf Umgebungsvariablen."""
     data = _load_yaml("jira.yaml")

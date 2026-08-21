@@ -1,8 +1,14 @@
-"""UX-Tests: Fehlerbehandlung und Edge Cases."""
+"""UX-Tests: Fehlerbehandlung und Edge Cases.
+
+Die Eingaben sind domaenenfrei und in `config/prompts.yaml` unter
+`prompts.generic` vorbelegt — anzupassen nur, wenn eine andere Sprache oder
+andere Sonderzeichen geprueft werden sollen.
+"""
 
 import pytest
 
 from utils.chat_helpers import ChatHelper
+from tests.prompt_helpers import generic
 
 
 pytestmark = pytest.mark.ux
@@ -42,10 +48,10 @@ class TestErrorHandling:
                 text = msg.text_content().strip()
                 assert len(text) > 0, "Leere User-Nachricht im Chat sichtbar"
 
-    def test_very_long_message(self, page, selectors):
+    def test_very_long_message(self, page, selectors, prompts):
         """Sehr langer Text wird korrekt behandelt."""
         chat = ChatHelper(page, selectors)
-        long_text = "Dies ist ein Test. " * 100  # ~1900 Zeichen
+        long_text = generic(prompts, "long_text_unit") * 100  # ~1900 Zeichen
 
         result = chat.send_and_wait(long_text, timeout=15000)
 
@@ -54,10 +60,10 @@ class TestErrorHandling:
             "Bot hat auf überlangen Text nicht geantwortet"
         )
 
-    def test_special_characters(self, page, selectors):
+    def test_special_characters(self, page, selectors, prompts):
         """Sonderzeichen werden korrekt verarbeitet."""
         chat = ChatHelper(page, selectors)
-        special_text = "Öffnungszeiten? <script>alert('test')</script> 🎢🎡"
+        special_text = generic(prompts, "special_characters")
 
         result = chat.send_and_wait(special_text)
 
@@ -67,10 +73,10 @@ class TestErrorHandling:
         has_alert = page.evaluate("() => { try { return false; } catch(e) { return false; } }")
         assert not has_alert, "Mögliche XSS-Schwachstelle erkannt"
 
-    def test_html_injection(self, page, selectors):
+    def test_html_injection(self, page, selectors, prompts):
         """HTML-Injection wird verhindert."""
         chat = ChatHelper(page, selectors)
-        html_text = '<img src=x onerror="alert(1)">'
+        html_text = generic(prompts, "html_injection")
 
         result = chat.send_and_wait(html_text)
 
@@ -85,16 +91,14 @@ class TestErrorHandling:
                     "HTML wurde nicht escaped – mögliche Injection"
                 )
 
-    def test_rapid_messages(self, page, selectors):
+    def test_rapid_messages(self, page, selectors, prompts):
         """Schnelle Folgefragen crashen den Chat nicht."""
         chat = ChatHelper(page, selectors)
 
-        # Sende drei Nachrichten schnell hintereinander
-        chat.send_message("Frage 1")
-        page.wait_for_timeout(200)
-        chat.send_message("Frage 2")
-        page.wait_for_timeout(200)
-        chat.send_message("Frage 3")
+        # Nachrichten schnell hintereinander senden
+        for message in generic(prompts, "rapid_fire"):
+            chat.send_message(message)
+            page.wait_for_timeout(200)
 
         # Warte und prüfe, dass der Chat noch funktioniert
         page.wait_for_timeout(5000)

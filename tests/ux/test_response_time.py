@@ -1,9 +1,14 @@
-"""UX-Tests: Antwortzeiten und Performance."""
+"""UX-Tests: Antwortzeiten und Performance.
+
+Die verwendeten Fragen kommen aus `config/prompts.yaml` — die Schwellenwerte
+gelten unabhaengig davon, was gefragt wird.
+"""
 
 import pytest
 
 from utils.chat_helpers import ChatHelper
 from config.settings import RESPONSE_TIMEOUT
+from tests.prompt_helpers import case_or_skip, generic, value_or_skip
 
 
 pytestmark = pytest.mark.ux
@@ -17,11 +22,12 @@ MAX_THRESHOLD = 30000        # Maximum: unter 30 Sekunden
 class TestResponseTime:
     """Prüft Antwortzeiten des Chatbots."""
 
-    def test_simple_question_response_time(self, page, selectors):
+    def test_simple_question_response_time(self, page, selectors, prompts):
         """Einfache Frage wird in akzeptabler Zeit beantwortet."""
+        case = case_or_skip(prompts, "simple_question", "domain_knowledge")
         chat = ChatHelper(page, selectors)
         result = chat.send_and_wait(
-            "Wie sind die Öffnungszeiten?",
+            case["prompt"],
             timeout=MAX_THRESHOLD,
         )
 
@@ -31,10 +37,12 @@ class TestResponseTime:
             f"(max. {ACCEPTABLE_THRESHOLD}ms)"
         )
 
-    def test_greeting_response_time(self, page, selectors):
+    def test_greeting_response_time(self, page, selectors, prompts):
         """Begrüßung wird schnell beantwortet."""
         chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Hallo!", timeout=MAX_THRESHOLD)
+        result = chat.send_and_wait(
+            generic(prompts, "greeting"), timeout=MAX_THRESHOLD
+        )
 
         assert result["success"], "Bot hat auf Begrüßung nicht geantwortet"
         assert result["response_time_ms"] < FAST_THRESHOLD, (
@@ -42,11 +50,12 @@ class TestResponseTime:
             f"(max. {FAST_THRESHOLD}ms)"
         )
 
-    def test_complex_question_response_time(self, page, selectors):
-        """Komplexe Frage wird in maximal 10 Sekunden beantwortet."""
+    def test_complex_question_response_time(self, page, selectors, prompts):
+        """Komplexe Frage wird innerhalb des Maximaltimeouts beantwortet."""
+        case = case_or_skip(prompts, "complex_question", "domain_knowledge")
         chat = ChatHelper(page, selectors)
         result = chat.send_and_wait(
-            "Welche Achterbahnen gibt es und welche davon ist für Kinder unter 8 geeignet?",
+            case["prompt"],
             timeout=MAX_THRESHOLD,
         )
 
@@ -55,14 +64,10 @@ class TestResponseTime:
             f"{MAX_THRESHOLD}ms geantwortet"
         )
 
-    def test_multiple_questions_average_time(self, page, selectors):
+    def test_multiple_questions_average_time(self, page, selectors, prompts):
         """Durchschnittliche Antwortzeit über mehrere Fragen."""
+        questions = value_or_skip(prompts, "context", "multi_turn")
         chat = ChatHelper(page, selectors)
-        questions = [
-            "Wo kann ich parken?",
-            "Was kostet der Eintritt?",
-            "Gibt es ein Hotel?",
-        ]
 
         times = []
         for question in questions:

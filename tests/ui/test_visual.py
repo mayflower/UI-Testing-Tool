@@ -3,6 +3,7 @@
 import pytest
 
 from utils.chat_helpers import ChatHelper
+from tests.prompt_helpers import generic
 
 
 pytestmark = pytest.mark.ui
@@ -37,10 +38,10 @@ class TestVisualScreenshots:
         page.wait_for_timeout(500)
         page.screenshot(path=screenshot_path("visual_mobile"))
 
-    def test_screenshot_after_message(self, page, selectors, screenshot_path):
+    def test_screenshot_after_message(self, page, selectors, screenshot_path, prompts):
         """Screenshot nach dem Senden einer Nachricht."""
         chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Hallo, was sind die Öffnungszeiten?")
+        result = chat.send_and_wait(generic(prompts, "greeting"))
 
         if result["success"]:
             page.wait_for_timeout(500)

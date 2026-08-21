@@ -1,0 +1,151 @@
+# UI/UX-Testing-Tool: fachliche Testinhalte
+#
+# Diese Datei ist die Vorlage. Kopiere sie nach `config/prompts.yaml` und trage
+# die Fragen deiner Domaene ein:
+#
+#     cp config/prompts.example.yaml config/prompts.yaml
+#
+# `config/prompts.yaml` ist bewusst nicht versioniert — die Fragen und erwarteten
+# Begriffe beschreiben das getestete Produkt, nicht das Testwerkzeug.
+#
+# Alle Eintraege sind optional. Ist ein Prompt `null` oder eine Liste leer, wird
+# der zugehoerige Test uebersprungen statt zu scheitern — dasselbe Verhalten wie
+# bei `brand.yaml`. Das Werkzeug ist also ohne diese Datei lauffaehig; es prueft
+# dann nur die domaenenfreien Faelle.
+
+prompts:
+
+  # ---------------------------------------------------------------------------
+  # Domaenenfreie Prompts. Sinnvoll vorbelegt, Anpassung nur bei Bedarf
+  # (z.B. andere Sprache als Deutsch).
+  # ---------------------------------------------------------------------------
+  generic:
+    # Begruessung — prueft, ob der Bot ueberhaupt antwortet.
+    greeting: "Hallo!"
+
+    # Wird 100x wiederholt, um einen ueberlangen Text zu erzeugen.
+    long_text_unit: "Dies ist ein Test. "
+
+    # Sonderzeichen und ein Script-Tag: prueft Escaping.
+    special_characters: "<script>alert('test')</script> 🎢🎡"
+
+    # HTML-Injection: darf nicht als Markup gerendert werden.
+    html_injection: '<img src=x onerror="alert(1)">'
+
+    # Drei Nachrichten in schneller Folge.
+    rapid_fire:
+      - "Frage 1"
+      - "Frage 2"
+      - "Frage 3"
+
+  # ---------------------------------------------------------------------------
+  # Fachfragen. Beliebig viele Eintraege — jeder wird zu einem eigenen Testfall.
+  # `expect_any`: mindestens einer dieser Begriffe muss in der Antwort vorkommen
+  # (Gross-/Kleinschreibung wird ignoriert). Antworten eines Sprachmodells sind
+  # probabilistisch, deshalb Begriffsmengen statt exakter Strings.
+  # ---------------------------------------------------------------------------
+  domain_knowledge:
+    # Beispiel — durch eigene Faelle ersetzen:
+    #
+    # opening_hours:
+    #   prompt: "Wann habt ihr geoeffnet?"
+    #   expect_any: ["uhr", "geoeffnet", "montag", "wochenende"]
+    #
+    # pricing:
+    #   prompt: "Was kostet das?"
+    #   expect_any: ["euro", "€", "preis", "kosten"]
+
+  # ---------------------------------------------------------------------------
+  # Gespraechskontext ueber mehrere Nachrichten.
+  # ---------------------------------------------------------------------------
+  context:
+    # Zwei Fragen, bei denen die zweite nur mit dem Kontext der ersten
+    # beantwortbar ist. `expect_any` prueft die Antwort auf die Folgefrage.
+    followup:
+      first: null
+      second: null
+      expect_any: []
+
+    # Mehrere Fragen in Folge — geprueft wird nur, dass alle beantwortet werden.
+    multi_turn: []
+
+  # ---------------------------------------------------------------------------
+  # Off-Topic: Fragen ausserhalb des Zustaendigkeitsbereichs. Erwartet wird ein
+  # freundlicher Verweis, keine inhaltliche Antwort.
+  # `forbidden_any` (optional): Begriffe, deren Auftauchen beweist, dass der Bot
+  # inhaltlich geantwortet hat statt zu verweisen.
+  # ---------------------------------------------------------------------------
+  off_topic:
+    # weather:
+    #   prompt: "Wie wird das Wetter morgen in Hamburg?"
+    #   forbidden_any: ["grad", "sonnig", "regen"]
+    #
+    # stock_price:
+    #   prompt: "Wie steht der DAX heute?"
+    #   forbidden_any: ["punkte", "prozent"]
+
+  # ---------------------------------------------------------------------------
+  # Halluzinationsschutz: eine Sache, die es nicht gibt. Der Bot darf sie nicht
+  # bestaetigen. `markers` sind Bestandteile des erfundenen Namens — tauchen sie
+  # zusammen mit einer Bestaetigung auf, gilt der Test als gescheitert.
+  # ---------------------------------------------------------------------------
+  hallucination:
+    invented_entity:
+      prompt: null
+      markers: []
+
+  # ---------------------------------------------------------------------------
+  # Fremdsprache: wird die Frage ueberhaupt beantwortet (Sprache egal)?
+  # ---------------------------------------------------------------------------
+  language:
+    foreign_question: "What are your opening hours?"
+
+# -----------------------------------------------------------------------------
+# Indikatoren fuer die Antwortbewertung. Die Vorbelegung ist deutschsprachig und
+# produktunabhaengig; bei anderer Sprache hier uebersetzen.
+# -----------------------------------------------------------------------------
+indicators:
+
+  # Der Bot beantwortet die Frage nicht inhaltlich, sondern verweist hoeflich.
+  refusal:
+    - "kann ich nicht"
+    - "kann ich leider"
+    - "weiß ich nicht"
+    - "weiss ich nicht"
+    - "keine information"
+    - "nicht beantworten"
+    - "darüber kann ich"
+    - "darueber kann ich"
+    - "nur zu themen"
+    - "nicht mein thema"
+    - "außerhalb"
+    - "ausserhalb"
+
+  # Selbstbewusste Bestaetigung — bei einer erfundenen Sache ein Warnsignal.
+  confirmation:
+    - "ja, "
+    - "natürlich"
+    - "natuerlich"
+    - "selbstverständlich"
+    - "selbstverstaendlich"
+
+  # Klare Negierung: der Bot sagt, dass er etwas nicht kennt.
+  negation:
+    - "kenne ich nicht"
+    - "nicht bekannt"
+    - "nicht gefunden"
+    - "existiert nicht"
+    - "gibt es nicht"
+
+  # Heuristik fuer "die Begruessung ist deutschsprachig".
+  greeting_language:
+    - "willkommen"
+    - "hallo"
+    - "guten"
+    - "herzlich"
+    - "kann ich"
+    - "helfe"
+    - "fragen"
+    - "danke"
+    - "bitte"
+    - "gerne"

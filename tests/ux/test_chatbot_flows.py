@@ -1,200 +1,124 @@
-"""UX-Tests: Conversation-Flows fuer den Ecki-Chatbot.
+"""UX-Tests: Conversation-Flows eines Chatbots.
 
-Diese Tests pruefen domaenenspezifisches Verhalten des Europa-Park-Chatbots:
-Fachwissen zu Park-Themen, Mehrfach-Turn-Kontext, Off-Topic-Verweigerung,
-Halluzinationssicherheit und Sprachverhalten. Antworten sind probabilistisch,
-deshalb wird auf Keyword-Mengen statt exakte Strings geprueft.
+Geprueft wird domaenenspezifisches Verhalten — Fachwissen, Mehrfach-Turn-Kontext,
+Off-Topic-Verweigerung, Halluzinationssicherheit, Sprachverhalten. Die Testlogik
+selbst kennt keine Domaene: Fragen, erwartete Begriffe und Bewertungsindikatoren
+kommen aus `config/prompts.yaml` (Vorlage: `config/prompts.example.yaml`).
+
+Antworten eines Sprachmodells sind probabilistisch, deshalb wird auf
+Keyword-Mengen statt auf exakte Strings geprueft. Fehlt ein Eintrag in der
+Konfiguration, ueberspringt sich der betroffene Test.
 """
 
 import pytest
 
 from utils.chat_helpers import ChatHelper
+from config.settings import get_prompts
+from tests.prompt_helpers import (
+    case_ids,
+    case_or_skip,
+    contains_any,
+    require_indicators,
+    value_or_skip,
+)
 
 
 pytestmark = pytest.mark.ux
 
 
-def _contains_any(text: str, keywords: list[str]) -> bool:
-    """True wenn mindestens eines der Keywords im Text vorkommt (case-insensitive)."""
-    if not text:
-        return False
-    lower = text.lower()
-    return any(kw.lower() in lower for kw in keywords)
-
-
-# Indikatoren dafuer, dass der Bot eine Frage NICHT inhaltlich beantwortet,
-# sondern hoeflich auf seinen Themenbereich verweist.
-_REFUSAL_INDICATORS = [
-    "kann ich nicht",
-    "kann ich leider",
-    "weiß ich nicht",
-    "weiss ich nicht",
-    "keine information",
-    "nicht beantworten",
-    "darüber kann ich",
-    "darueber kann ich",
-    "nur zu europa-park",
-    "nur zu themen",
-    "nicht mein thema",
-    "außerhalb",
-    "ausserhalb",
-    "europa-park",  # Bot lenkt typischerweise zurueck auf Park-Themen
-]
-
-
-# Indikatoren fuer eine selbstbewusste Bestaetigung — wuerde bei Halluzinations-
-# Tests bedeuten, der Bot erfindet etwas.
-_CONFIRMATION_INDICATORS = [
-    "ja, ",
-    "natürlich",
-    "natuerlich",
-    "selbstverständlich",
-    "selbstverstaendlich",
-    "die fährt",
-    "die faehrt",
-    "wurde eröffnet",
-    "wurde eroeffnet",
-]
+# Die Parametrisierung braucht die Fallnamen bereits beim Einsammeln der Tests,
+# also vor dem Greifen der Fixture. Deshalb hier einmalig geladen.
+_CONFIG = get_prompts()
 
 
 class TestDomainKnowledge:
-    """Prueft, ob der Bot Park-spezifische Fragen mit relevanten Inhalten beantwortet."""
+    """Prueft, ob der Bot fachliche Fragen mit relevanten Inhalten beantwortet."""
 
-    def test_opening_hours_question(self, page, selectors):
-        """Frage nach Oeffnungszeiten enthaelt Zeit- oder Saison-Bezug."""
+    @pytest.mark.parametrize("case_name", case_ids(_CONFIG, "domain_knowledge"))
+    def test_domain_question(self, page, selectors, prompts, case_name):
+        """Fachfrage wird beantwortet und enthaelt einen erwarteten Begriff."""
+        case = case_or_skip(prompts, case_name, "domain_knowledge")
         chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Wann hat der Europa-Park geoeffnet?")
+        result = chat.send_and_wait(case["prompt"])
 
         assert result["success"], "Bot hat nicht geantwortet"
-        keywords = ["uhr", "öffnet", "oeffnet", "saison", "geöffnet", "geoeffnet",
-                    "geschlossen", "winter", "sommer", "9:00", "10:00", "18:00",
-                    "19:00", "20:00", "tag", "öffnungszeit", "oeffnungszeit"]
-        assert _contains_any(result["response"], keywords), (
-            f"Antwort enthaelt keinen Zeitbezug: '{result['response'][:200]}'"
-        )
 
-    def test_ticket_price_question(self, page, selectors):
-        """Frage nach Ticketpreisen enthaelt Preis- oder Ticket-Bezug."""
-        chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Was kostet ein Tagesticket?")
+        expected = case.get("expect_any") or []
+        if not expected:
+            # Kein Erwartungswert konfiguriert: dann gilt nur, dass eine
+            # inhaltliche Antwort kam.
+            assert len(result["response"]) > 10, (
+                f"Antwort zu kurz: '{result['response']}'"
+            )
+            return
 
-        assert result["success"], "Bot hat nicht geantwortet"
-        keywords = ["euro", "€", "preis", "ticket", "erwachsen", "kind",
-                    "ermäßigt", "ermaessigt", "online", "kasse"]
-        assert _contains_any(result["response"], keywords), (
-            f"Antwort enthaelt keinen Preisbezug: '{result['response'][:200]}'"
-        )
-
-    def test_rollercoaster_question(self, page, selectors):
-        """Frage nach Achterbahnen nennt mindestens eine bekannte Bahn oder den Begriff."""
-        chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Welche Achterbahnen gibt es im Park?")
-
-        assert result["success"], "Bot hat nicht geantwortet"
-        # Bekannte Bahnen oder generische Begriffe
-        keywords = ["silver star", "blue fire", "wodan", "eurosat", "euro-mir",
-                    "matterhorn", "voltron", "achterbahn", "coaster",
-                    "fahrgeschäft", "fahrgeschaeft", "attraktion"]
-        assert _contains_any(result["response"], keywords), (
-            f"Keine Achterbahn/Attraktion erwaehnt: '{result['response'][:200]}'"
-        )
-
-    def test_hotel_question(self, page, selectors):
-        """Frage nach Hotels nennt Park-Hotels oder Uebernachtung."""
-        chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Welche Hotels gibt es im Park?")
-
-        assert result["success"], "Bot hat nicht geantwortet"
-        keywords = ["hotel", "el andaluz", "castillo", "bell rock", "colosseo",
-                    "santa isabel", "krønasår", "kronasar", "übernacht",
-                    "uebernacht", "zimmer", "resort"]
-        assert _contains_any(result["response"], keywords), (
-            f"Antwort enthaelt keinen Hotel-Bezug: '{result['response'][:200]}'"
-        )
-
-    def test_directions_question(self, page, selectors):
-        """Frage nach Anfahrt/Adresse enthaelt Standort- oder Routen-Bezug."""
-        chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Wie komme ich zum Europa-Park?")
-
-        assert result["success"], "Bot hat nicht geantwortet"
-        keywords = ["rust", "auto", "bahn", "zug", "anfahrt", "adresse",
-                    "parkplatz", "autobahn", "a5", "shuttle", "bus", "ringsheim"]
-        assert _contains_any(result["response"], keywords), (
-            f"Antwort enthaelt keinen Anfahrts-Bezug: '{result['response'][:200]}'"
+        assert contains_any(result["response"], expected), (
+            f"Antwort enthaelt keinen der erwarteten Begriffe {expected}: "
+            f"'{result['response'][:200]}'"
         )
 
 
 class TestConversationContext:
     """Prueft, ob der Bot Kontext aus vorherigen Nachrichten bewahrt."""
 
-    def test_followup_uses_prior_context(self, page, selectors):
-        """Folgefrage 'Welche ist die schnellste?' bezieht sich auf vorher genannte Achterbahnen."""
+    def test_followup_uses_prior_context(self, page, selectors, prompts):
+        """Die Folgefrage ist nur mit dem Kontext der ersten Frage beantwortbar."""
+        first_prompt = value_or_skip(prompts, "context", "followup", "first")
+        second_prompt = value_or_skip(prompts, "context", "followup", "second")
+        expected = value_or_skip(prompts, "context", "followup", "expect_any")
+
         chat = ChatHelper(page, selectors)
 
-        first = chat.send_and_wait("Welche Achterbahnen gibt es im Park?")
+        first = chat.send_and_wait(first_prompt)
         assert first["success"], "Erste Frage unbeantwortet"
 
-        followup = chat.send_and_wait("Welche davon ist die schnellste?")
+        followup = chat.send_and_wait(second_prompt)
         assert followup["success"], "Folgefrage unbeantwortet"
 
-        # Folgeantwort sollte konkret werden (Bahn-Name oder Geschwindigkeit)
-        keywords = ["silver star", "blue fire", "wodan", "voltron", "eurosat",
-                    "km/h", "stundenkilometer", "schnellste"]
-        assert _contains_any(followup["response"], keywords), (
+        assert contains_any(followup["response"], expected), (
             f"Folgeantwort wirkt kontextlos: '{followup['response'][:200]}'"
         )
 
-    def test_multi_turn_conversation_stable(self, page, selectors):
-        """Drei aufeinanderfolgende Fragen liefern alle eine Antwort."""
+    def test_multi_turn_conversation_stable(self, page, selectors, prompts):
+        """Alle Fragen einer Folge liefern eine Antwort."""
+        questions = value_or_skip(prompts, "context", "multi_turn")
         chat = ChatHelper(page, selectors)
-        questions = [
-            "Wann hat der Park auf?",
-            "Und wie sind die Ticketpreise?",
-            "Gibt es ein Hotel direkt am Park?",
-        ]
 
         responses = []
-        for q in questions:
-            r = chat.send_and_wait(q, timeout=30000)
-            responses.append(r)
+        for question in questions:
+            responses.append(chat.send_and_wait(question, timeout=30000))
             page.wait_for_timeout(500)
 
         successes = [r for r in responses if r["success"]]
-        assert len(successes) == 3, (
-            f"Nicht alle Folgefragen beantwortet ({len(successes)}/3)"
+        assert len(successes) == len(questions), (
+            f"Nicht alle Folgefragen beantwortet "
+            f"({len(successes)}/{len(questions)})"
         )
 
 
 class TestOffTopicHandling:
     """Prueft, ob der Bot Off-Topic-Fragen freundlich auf seinen Bereich zurueckfuehrt."""
 
-    def test_political_question_refused(self, page, selectors):
-        """Frage zu Politik wird nicht inhaltlich beantwortet."""
+    @pytest.mark.parametrize("case_name", case_ids(_CONFIG, "off_topic"))
+    def test_off_topic_refused(self, page, selectors, prompts, case_name):
+        """Frage ausserhalb des Zustaendigkeitsbereichs wird nicht inhaltlich beantwortet."""
+        case = case_or_skip(prompts, case_name, "off_topic")
+        refusal = require_indicators(prompts, "refusal")
+
         chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Wer ist der aktuelle Bundeskanzler?")
+        result = chat.send_and_wait(case["prompt"])
 
         assert result["success"], "Bot hat nicht geantwortet"
-        # Erwartung: Refusal oder Verweis auf Park-Themen — KEINE Namensnennung
-        political_names = ["scholz", "merkel", "merz", "habeck", "lindner"]
-        if _contains_any(result["response"], political_names):
+
+        # Verbotene Begriffe beweisen, dass inhaltlich geantwortet wurde.
+        forbidden = case.get("forbidden_any") or []
+        if forbidden and contains_any(result["response"], forbidden):
             pytest.fail(
-                f"Bot nennt politische Namen statt Off-Topic-Refusal: "
-                f"'{result['response'][:200]}'"
+                f"Bot antwortet inhaltlich statt zu verweisen (Treffer aus "
+                f"{forbidden}): '{result['response'][:200]}'"
             )
-        assert _contains_any(result["response"], _REFUSAL_INDICATORS), (
-            f"Keine erkennbare Off-Topic-Verweigerung: '{result['response'][:200]}'"
-        )
 
-    def test_stock_price_question_refused(self, page, selectors):
-        """Frage zu Aktienkursen wird nicht inhaltlich beantwortet."""
-        chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("Wie steht der DAX heute?")
-
-        assert result["success"], "Bot hat nicht geantwortet"
-        # Bot sollte keine konkrete Zahl liefern (sehr starkes Halluzinations-Signal)
-        # und stattdessen zurueckfuehren
-        assert _contains_any(result["response"], _REFUSAL_INDICATORS), (
+        assert contains_any(result["response"], refusal), (
             f"Keine erkennbare Off-Topic-Verweigerung: '{result['response'][:200]}'"
         )
 
@@ -202,31 +126,32 @@ class TestOffTopicHandling:
 class TestHallucinationGuard:
     """Prueft, ob der Bot bei erfundenen Begriffen nicht halluziniert."""
 
-    def test_invented_attraction_not_confirmed(self, page, selectors):
-        """Frage nach erfundener Achterbahn wird nicht bestaetigt."""
+    def test_invented_entity_not_confirmed(self, page, selectors, prompts):
+        """Frage nach einer erfundenen Sache wird nicht bestaetigt."""
+        prompt = value_or_skip(prompts, "hallucination", "invented_entity", "prompt")
+        markers = value_or_skip(prompts, "hallucination", "invented_entity", "markers")
+        refusal = require_indicators(prompts, "refusal")
+        confirmation = require_indicators(prompts, "confirmation")
+        negation = require_indicators(prompts, "negation")
+
         chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait(
-            "Erzaehl mir mehr ueber die Achterbahn 'Quantum Phoenix XZ-9000'."
-        )
+        result = chat.send_and_wait(prompt)
 
         assert result["success"], "Bot hat nicht geantwortet"
-        response_lower = result["response"].lower()
 
-        # Wenn Bot den Namen woertlich uebernimmt UND eine Bestaetigung gibt → Halluzination
-        mentions_invented = "quantum phoenix" in response_lower or "xz-9000" in response_lower
-        confirms = _contains_any(result["response"], _CONFIRMATION_INDICATORS)
+        # Uebernimmt der Bot den erfundenen Namen UND bestaetigt er ihn,
+        # ist das eine Halluzination.
+        mentions_invented = contains_any(result["response"], markers)
+        confirms = contains_any(result["response"], confirmation)
         if mentions_invented and confirms:
             pytest.fail(
-                f"Bot bestaetigt erfundene Achterbahn (moegliche Halluzination): "
+                f"Bot bestaetigt eine erfundene Sache (moegliche Halluzination): "
                 f"'{result['response'][:300]}'"
             )
 
-        # Akzeptable Antwort: Refusal, Nichtwissen, oder Vorschlag echter Bahnen
         acceptable = (
-            _contains_any(result["response"], _REFUSAL_INDICATORS)
-            or _contains_any(result["response"], ["kenne ich nicht", "nicht bekannt",
-                                                    "nicht gefunden", "existiert nicht",
-                                                    "keine attraktion"])
+            contains_any(result["response"], refusal)
+            or contains_any(result["response"], negation)
         )
         assert acceptable, (
             f"Antwort weder Refusal noch klare Negierung: '{result['response'][:300]}'"
@@ -236,12 +161,14 @@ class TestHallucinationGuard:
 class TestLanguageHandling:
     """Prueft die Sprachfaehigkeit des Bots."""
 
-    def test_english_question_gets_response(self, page, selectors):
-        """Englische Frage wird beantwortet (egal ob auf DE oder EN)."""
-        chat = ChatHelper(page, selectors)
-        result = chat.send_and_wait("What are the opening hours?")
+    def test_foreign_language_question_gets_response(self, page, selectors, prompts):
+        """Fremdsprachige Frage wird beantwortet — in welcher Sprache, ist offen."""
+        prompt = value_or_skip(prompts, "language", "foreign_question")
 
-        assert result["success"], "Bot hat nicht auf englische Frage geantwortet"
+        chat = ChatHelper(page, selectors)
+        result = chat.send_and_wait(prompt)
+
+        assert result["success"], "Bot hat nicht auf fremdsprachige Frage geantwortet"
         assert len(result["response"]) > 10, (
             f"Antwort zu kurz: '{result['response']}'"
         )

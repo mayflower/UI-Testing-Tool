@@ -21,6 +21,7 @@ from config.settings import (
     get_environment,
     get_selectors,
     get_brand,
+    get_prompts,
 )
 
 # Gespeicherte Session gilt fuer 8 Stunden
@@ -68,6 +69,16 @@ def selectors():
 def brand():
     """Branding-Konfiguration als Fixture."""
     return get_brand()
+
+
+@pytest.fixture(scope="session")
+def prompts():
+    """Fachliche Testinhalte als Fixture (Fragen, erwartete Begriffe, Indikatoren).
+
+    Kein Skip hier: welcher Eintrag fehlt, entscheidet der einzelne Test —
+    die domaenenfreien Faelle laufen auch ohne konfigurierte Domaene.
+    """
+    return get_prompts()
 
 
 def _get_auth_state_path(environment: dict) -> str:
